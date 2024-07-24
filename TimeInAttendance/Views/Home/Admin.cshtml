@@ -1,0 +1,854 @@
+﻿﻿@using System.Web;
+@using System.Web.Mvc;
+@using System.Data;
+@using System.Data.SqlClient;
+@using System.IO;
+
+@{ ViewBag.Title = "Admin";
+    string connStr = @"Data Source=(LocalDB)\MSSQLLocalDB;AttachDbFilename=C:\Users\kaysh\source\repos\TimeInAttendance\TimeInAttendance\App_Data\AttendanceDB.mdf;Integrated Security=True";
+    List<dynamic> courses = new List<dynamic>();
+
+    using (var db = new SqlConnection(connStr))
+    {
+        db.Open();
+        using (var cmd = db.CreateCommand())
+        {
+            cmd.CommandType = CommandType.Text;
+            cmd.CommandText = "SELECT * FROM COURSE";
+            using (var reader = cmd.ExecuteReader())
+            {
+                if (reader.HasRows)
+                {
+                    while (reader.Read())
+                    {
+                        courses.Add(new
+                        {
+                            Id = reader["COURSE_ID"].ToString(),
+                            Block = reader["COURSE_SECTION"].ToString(),
+                            Image = reader["COURSE_IMAGE_URL"].ToString(),
+                            Code = reader["COURSE_CODE"].ToString(),
+                            Title = reader["COURSE_TITLE"].ToString(),
+                            Schedule = reader["COURSE_SCHED"].ToString(),
+                            Time = reader["COURSE_TIME"].ToString()
+                        });
+                    }
+                }
+            }
+        }
+    }
+}
+
+@{
+    List<dynamic> notifications = new List<dynamic>();
+
+    using (var db = new SqlConnection(connStr))
+    {
+        db.Open();
+        using (var cmd = db.CreateCommand())
+        {
+            cmd.CommandType = CommandType.Text;
+            cmd.CommandText = "SELECT * FROM NOTIFICATION";
+            using (var reader = cmd.ExecuteReader())
+            {
+                if (reader.HasRows)
+                {
+                    while (reader.Read())
+                    {
+                        notifications.Add(new
+                        {
+                            Id = reader["STUDENT_ID"].ToString(),
+                            Fullname = reader["STUDENT_FIRSTNAME"].ToString() + " " + reader["STUDENT_LASTNAME"].ToString(),
+                            Section = reader["COURSE_SECTION"].ToString(),
+                            Code = reader["COURSE_CODE"].ToString(),
+                            Contact = reader["STUDENT_CONTACT_NO"].ToString(),
+                        });
+                    }
+                }
+            }
+        }
+    }
+}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Attendance Monitoring System</title>
+    <link rel="icon" type="image/x-icon" href="AMS-Logo.svg">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="attendance.css" />
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/sweetalert2@10.16.7/dist/sweetalert2.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@10"></script>
+
+</head>
+<body>
+    <div class="datetime" id="datetime"></div>
+    <div class="main-container">
+        <div class="dashboard-container">
+            <div class="head-container">
+                <img src="@Url.Content("~/Content/Images/AMS-Logo.svg")" alt="logo" class="d-block mx-auto">
+                <p style="font-size: 15px">Attendance Monitoring System</p>
+            </div>
+            <button type="button" class="btn btn-dashboard" onclick="openTab(event, 'Dashboard')" id="defaultOpen">
+                <img src="@Url.Content("~/Content/Images/Dashboard.svg")" alt="Dashboard Icon" class="button-icon"> Dashboard
+            </button>
+            <button type="button" class="btn btn-courses" onclick="openTab(event, 'Courses')">
+                <img src="@Url.Content("~/Content/Images/courses.svg")" alt="Courses Icon" class="button-icon"> Courses
+            </button>
+            <button type="button" class="btn btn-profiles" onclick="openTab(event, 'Profiles')">
+                <img src="@Url.Content("~/Content/Images/Users.svg")" alt="Profiles Icon" class="button-icon"> Profiles
+            </button>
+            <button type="button" class="btn btn-settings" onclick="openTab(event, 'Notif')">
+                <img src="@Url.Content("~/Content/Images/Settings.svg")" alt="Settings Icon" class="button-icon"> Notification
+            </button>
+            <button type="button" class="btn btn-about" onclick="openTab(event, 'About')">
+                <img src="@Url.Content("~/Content/Images/Info.svg")" alt="About Icon" class="button-icon"> About
+            </button>
+            <div class="logout-container">
+                <button type="button" class="btn btn-Logout" id="logoutButton">
+                    <img src="@Url.Content("~/Content/Images/Logout.png")" alt="Logout Icon" class="button-icon"> Logout
+                </button>
+            </div>
+        </div>
+
+        <!--Dashboard Main Container-->
+        <div class="dash-container">
+            <div id="Dashboard" class="tabcontent">
+                <div id="dashboard-content" class="row pt-5">
+
+                    @if (courses.Any())
+                    {
+                        for (var i = 0; i < courses.Count; i++)
+                        {
+                            var course = courses[i];
+
+                            <div class="col-md-4 mb-4">
+
+                                <div class="card card-dashboard" style="height: 25rem; width: 20rem; cursor: pointer;" data-id="@course.Id" data-code="@course.Code" data-section="@course.Block" data-time="@course.Time" data-sched="@course.Schedule">
+                                    <div style="height: 15rem; overflow: hidden;">
+                                        <img src="../Home/Image?filename=@HttpUtility.UrlEncode(course.Image)" class="card-img-top w-100 h-100" style="object-fit: cover;" alt="Course Image">
+                                    </div>                                    
+                                    <div class="card-body">
+                                        <h6 class="card-title text-truncate fs-10">@course.Title</h6>
+                                        <h6 class="card-subtitle mb-2 text-truncate fs-16 text-muted">@course.Code</h6>
+                                        <p class="card-text">
+                                            <span class="d-block text-truncate fs-20 text-muted">@course.Block</span>
+                                            <span class="d-block text-truncate fs-20 text-muted">@course.Schedule | @course.Time</span>
+                                        </p>
+                                    </div>
+                                </div>
+
+                            </div>
+
+                        }
+                    }
+                    else
+                    {
+                        <p>No Subjects available.</p>
+                    }
+                </div>
+                <div id="body-content" class="container" style="display: none;">
+                    <div class="row align-items-center">
+                        <div class="d-flex align-items-center">
+                            <img id="back" src="@Url.Content("~/Content/Images/Left.svg")" style="width: 25px; margin-top: -15px; cursor: pointer;" />
+                            <p id="selected-course" class="mx-3"></p>
+                            <p id="selected-section" class="mx-3"></p>
+                            <p id="selected-sched" class="mx-3"></p>
+                        </div>
+                    </div>
+                    <div class="row align-items-center">
+                        <div class="d-flex align-items-center">
+                            <img id="calendar-icon" src="@Url.Content("~/Content/Images/Calendar.svg")" style="width: 25px; margin-top: -5px;" />
+                            <input type="date" id="selected-date" class="form-control mx-3" style="width: auto; font-size: 9px;" />
+                            <img src="@Url.Content("~/Content/Images/Slider.svg")" style="width: 25px; margin-left: 600px" />
+                            <select class="form-control mx-3" style="width: auto; font-size: 9px;">
+                                <option>Attendance Report</option>
+                                <option>Tardiness Report</option>
+                                <option>Absences Report</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="row mt-2">
+                        <div class="col-12">
+                            <div class="table-responsive">
+                                <table id="attendanceTable" class="table table-hover table-striped align-middle">
+                                    <thead style="font-size: 12px; font-weight: normal; text-align: center; ">
+                                        <tr>
+                                            <th style="width: 14.28%; background-color: #072c12; color: white;">ID</th>
+                                            <th style="width: 14.28%; background-color: #072c12; color: white;">Last Name</th>
+                                            <th style="width: 14.28%; background-color: #072c12; color: white;">First Name</th>
+                                            <th style="width: 14.28%; background-color: #072c12; color: white;">Middle Initial</th>
+                                            <th style="width: 14.28%; background-color: #072c12; color: white;">Time In</th>
+                                            <th style="width: 14.28%; background-color: #072c12; color: white;">Remarks</th>
+                                            <th style="width: 14.28%; background-color: #072c12; color: white;">Supporting Docs</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                    <button type="button" class="btn btn-success" id="note">Start Attendance</button>
+                </div>
+            </div>
+
+            <!--Courses Main Container-->
+            <div id="Courses" class="tabcontent">
+                <div class="create-course">
+                    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createCourseModal">
+                        Create Course
+                    </button>
+                </div>
+                <div class="row pt-2">
+                    @if (courses.Any())
+                    {
+                        for (var i = 0; i < courses.Count; i++)
+                        {
+                            var course = courses[i];
+
+                            <div class="col-md-4 mb-4">
+                                <div class="card" style="height: 25rem; width: 20rem; cursor: pointer;">
+                                    <div style="height: 15rem; overflow: hidden;">
+                                        <img src="../Home/Image?filename=@HttpUtility.UrlEncode(course.Image)" class="card-img-top w-100 h-100" style="object-fit: cover;" alt="Course Image">
+                                    </div>                                      
+                                    <div class="card-body">
+                                        <div class="course-title-code">
+                                            <p class="course-title text-truncate fs-10" id="code_title_@i">@course.Title</p>
+                                            <p class="course-code text-truncate fs-16 text-muted" id="code_code_@i" value="@course.Code">@course.Code</p>
+                                        </div>
+                                        <div class="schedule-block-time">
+                                            <p class="course-block d-block text-truncate fs-20 text-muted" id="code_block_@i">@course.Block</p>
+                                            <p class="schedule-time d-block text-truncate fs-20 text-muted" id="code_schedule_@i">@course.Schedule | @course.Time</p>
+                                        </div>
+                                        <div class="buttons mt-3">
+                                            <div class="row">
+                                                <div class="col-6 text-start">
+                                                    <button type="button" id="edit_@i" name="edit" class="btn btn-outline-success form-control" data-bs-dismiss="modal" data-course-code="@course.Code" data-bs-toggle="modal" data-bs-target="#updateCourseModal">Edit</button>
+                                                </div>
+                                                <div class="col-6 text-end">
+                                                    <button type="button" id="delete_@i" name="delete" class="btn btn-danger form-control" data-course-code="@course.Id">Delete</button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    }
+                    else
+                    {
+                        <p>No Subjects available.</p>
+                    }
+                </div>
+            </div>
+
+            <!--Profiles Main Container-->
+            <div id="Profiles" class="tabcontent">
+                <button type="button" class="btn btn-primary">
+                    Profile
+                </button>
+            </div>
+
+            <!--Notif Main Container-->
+            <div id="Notif" class="tabcontent py-5">
+                @if (notifications.Any())
+                {
+                    for (var i = 0; i < notifications.Count; i++)
+                    {
+                        var notification = notifications[i];
+
+                        <div class="notification">
+                            <img src="@Url.Content("~/Content/Images/Add.png")" alt="Icon">
+                            <div class="notification-text">
+                                <p>@notification.Fullname wants to join the class @notification.Code @notification.Section</p>
+                            </div>
+                            <div class="notification-buttons">
+                                <button type="button" class="btn btn-success approveButton" data-student="@notification.Id" data-code="@notification.Code" data-section="@notification.Section" data-contact="@notification.Contact">Approve</button>
+                                <button type="button" class="btn btn-danger denyButton" data-student="@notification.Id" data-code="@notification.Code" data-section="@notification.Section" data-contact="@notification.Contact">Deny</button>
+                            </div>
+                        </div>
+                    }
+                }
+                else
+                {
+                    <p>No Application yet.</p>
+                }
+            </div>
+
+            <!--About Main Container-->
+            <div id="About" class="tabcontent">
+                <p>About content goes here...</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+            function openTab(evt, tabName) {
+                var i, tabcontent, tablinks;
+                tabcontent = document.getElementsByClassName("tabcontent");
+                for (i = 0; i < tabcontent.length; i++) {
+                    tabcontent[i].style.display = "none";
+                }
+                tablinks = document.getElementsByClassName("btn");
+                for (i = 0; i < tablinks.length; i++) {
+                    tablinks[i].className = tablinks[i].className.replace(" active", "");
+                }
+                document.getElementById(tabName).style.display = "block";
+                evt.currentTarget.className += " active";
+            }
+
+            document.getElementById("defaultOpen").click();
+
+            function updateDateTime() {
+                var now = new Date();
+                var options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' };
+                var datetime = now.toLocaleString('en-US', options);
+                document.getElementById('datetime').innerText = datetime;
+            }
+
+            setInterval(updateDateTime, 1000);
+            updateDateTime();
+
+    </script>
+</body>
+</html>
+<script src="~/Scripts/MyScript/jquery-3.7.1.min.js"></script>
+<script src="~/Scripts/MyScript/admin.js"></script>
+<style>
+
+    body {
+        font-family: 'Poppins', sans-serif;
+        background-image: url('@Url.Content("~/Content/Images/Background.jpg")');
+        background-size: cover;
+        background-repeat: no-repeat;
+        background-position: center center;
+        height: 100vh;
+        margin: 0;
+        overflow: hidden;
+        position: relative;
+    }
+
+
+    .logout-container {
+        margin-top: auto; /* Pushes logout button to the bottom */
+        text-align: center;
+    }
+
+    .notification {
+        background-color: white;
+        padding: 15px;
+        border-radius: 5px;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        margin-bottom: 15px;
+        display: flex;
+        align-items: center;
+    }
+
+    .notification img {
+        width: 40px;
+        height: 40px;
+        margin-right: 15px;
+    }
+
+    .notification-text {
+        flex-grow: 1;
+        display: flex;
+        align-items: center;
+        text-align: center;
+    }
+
+    .notification-buttons {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+    }
+
+    .card-container {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-between;
+        padding: 10px;
+    }
+
+    .card {
+        width: calc(33% - 20px);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 10px;
+        margin-bottom: 20px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        border-radius: 10px;
+        background-color: #fff;
+    }
+
+        .card:hover {
+            transform: scale(1.05);
+        }
+
+        .card .img img {
+            width: 100%;
+            height: 30vh;
+            max-height: 200px;
+            object-fit: cover;
+            border-radius: 10px;
+        }
+
+        .card .card-body {
+            width: 100%;
+        }
+
+        .card .course-title-code {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 0px;
+        }
+
+        .card .course-title {
+            flex: 1;
+            font-weight: bold;
+            text-align: left;
+        }
+
+        .card .course-code {
+            flex: 1;
+            text-align: right;
+        }
+
+        .card .schedule-block-time {
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .card .course-block {
+            flex: 1;
+            text-align: left;
+        }
+
+        .card .schedule-time {
+            flex: 1;
+            text-align: right;
+            font-weight:100;
+            color: #072C12;
+            font-size: 14px;
+        }
+
+    .dashboard-container .head-container {
+        text-align: center;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+    }
+
+        .dashboard-container .head-container img {
+            margin-top: 10px;
+            max-width: 80px;
+            margin-bottom: 20px;
+        }
+
+        .dashboard-container .head-container h1 {
+            font-size: 10px;
+            margin-bottom: 10px;
+        }
+
+    .main-container {
+        display: flex;
+        align-items: flex-start;
+        position: absolute;
+        top: 15px;
+        left: 8px;
+        width: calc(100% - 30px);
+    }
+
+    .dashboard-container {
+        height: 92vh;
+        background-color: rgba(227, 247, 231, 0.678);
+        display: flex;
+        flex-direction: column;
+        width: 170px;
+        border-radius: 15px;
+        margin-right: 10px;
+        margin-left: 10px;
+    }
+
+        .dashboard-container > * {
+            margin-bottom: 10px;
+        }
+
+        .dashboard-container .btn {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+            outline: none;
+            border: none;
+        }
+
+        .dashboard-container .btn-dashboard {
+            margin-top: 20px;
+            font-size: 13px;
+            color: #072C12;
+        }
+
+        .dashboard-container .btn-profiles {
+            font-size: 13px;
+        }
+
+        .dashboard-container .btn-settings {
+            font-size: 13px;
+        }
+
+        .dashboard-container .btn-about {
+            font-size: 13px;
+        }
+
+        .dashboard-container .btn-courses {
+            font-size: 13px;
+        }
+
+        .dashboard-container .button-icon {
+            width: 30px;
+            height: 30px;
+            margin-right: 10px;
+            margin-left: 17px;
+        }
+
+        .dashboard-container button:hover {
+            color: #033f1b;
+        }
+
+    .dash-container .img{
+        height: 30vh;
+    }
+
+    .dash-container {
+        flex: 1;
+        height: 92vh;
+        background-color: rgba(227, 247, 231, 0.678);
+        margin-left: 15px;
+        padding: 10px;
+        border-radius: 20px;
+        overflow-y: auto;
+        padding-bottom: 20px;
+    }
+
+    .tabcontent {
+        align-items: center;
+        padding: 15px;
+    }
+
+    .tabcontent .create-course{
+        margin-bottom: 10px;
+    }
+
+    .datetime {
+        margin-top: -20px;
+        position: fixed;
+        top: 40px;
+        right: 40px;
+        font-size: 16px;
+        font-weight: bold;
+        color: #072c12;
+        padding-top: 5px;
+        padding-left: 10px;
+        padding-bottom: 10px;
+        padding-right: 10px;
+        border-radius: 10px;
+        z-index: 4;
+        font-weight: 300;
+    }
+
+    .dashboard-container .button-icon {
+        transition: filter 0.3s ease;
+    }
+
+        .dashboard-container .button-icon:hover {
+            filter: invert(70%);
+        }
+
+    .dashboard-container button.active,
+    .dashboard-container button:focus {
+        box-shadow: 0 0 0 0.2rem rgba(13, 117, 34, 0.5);
+    }
+
+    ::-webkit-scrollbar {
+        width: 10px;
+    }
+
+    ::-webkit-scrollbar-track {
+        background: #48d65485;
+    }
+
+    ::-webkit-scrollbar-thumb {
+        border-radius: 10px;
+        background: rgb(39, 160, 63);
+    }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #5ac23a;
+        }
+
+
+</style>
+
+<!-- Your form goes here -->
+<!-- Create Course Modal -->
+<form id="Create-course" method="post" action="../Home/Admin" enctype="multipart/form-data">
+    <div class="modal fade" id="createCourseModal" tabindex="-1" aria-labelledby="registrationModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content modal-transparent">
+                <div class="modal-body">
+                    <div class="information-container">
+                        <h3>Create Course</h3>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="row">
+                                    <div class="col-md-12">
+                                        <input type="text" id="code" name="code" class="form-control mb-3" placeholder="Code">
+                                    </div>
+                                    <div class="col-md-12">
+                                        <select id="courseType" name="courseType" class="form-control mb-3">
+                                            <option value="" disabled selected>Select Course Type</option>
+                                            <option value="lecture">Lecture</option>
+                                            <option value="laboratory">Laboratory</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-12" style="margin-bottom: 20px">
+                                        <label for="img">Select Class Cover Photo</label>
+                                        <input type="file" class="form-control" name="img" accept="image/jpg,image/bmp,image/png,image/gif" required />
+                                    </div>
+                                    <div class="col-md-12">
+                                        <textarea id="description" name="description" class="form-control mb-3" placeholder="Description" rows="6"></textarea>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="row">
+                                    <div class="col-md-12">
+                                        <input type="text" id="title" name="title" class="form-control mb-3" placeholder="Title">
+                                    </div>
+                                    <div class="col-md-12">
+                                        <input type="number" id="units" name="units" class="form-control mb-3" placeholder="Units" min="0">
+                                    </div>
+                                    <div class="col-md-12">
+                                        <div class="form-control mb-3">
+                                            <label for="schedule">Select Schedule</label>
+                                            <div style="column-count: 2; padding-right: -50px">
+                                                <label style="display: block;"><input type="checkbox" name="schedule" value="MON"> MON</label>
+                                                <label style="display: block;"><input type="checkbox" name="schedule" value="TUE"> TUE</label>
+                                                <label style="display: block;"><input type="checkbox" name="schedule" value="WED"> WED</label>
+                                                <label style="display: block;"><input type="checkbox" name="schedule" value="THU"> THU</label>
+                                                <label style="display: block;"><input type="checkbox" name="schedule" value="FRI"> FRI</label>
+                                                <label style="display: block;"><input type="checkbox" name="schedule" value="SAT"> SAT</label>
+                                                <label style="display: block;"><input type="checkbox" name="schedule" value="SUN"> SUN</label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-12 time-container">
+                                        <div class="time-row" id="time-MON" style="display: none;">
+                                            <input type="time" id="time-MON-start" name="time-MON-start" class="form-control mb-3 time-input" placeholder="Start time for MON">
+                                            <span>_</span>
+                                            <input type="time" id="time-MON-end" name="time-MON-end" class="form-control mb-3 time-input" placeholder="End time for MON">
+                                        </div>
+                                        <div class="time-row" id="time-TUE" style="display: none;">
+                                            <input type="time" id="time-TUE-start" name="time-TUE-start" class="form-control mb-3 time-input" placeholder="Start time for TUE">
+                                            <span>_</span>
+                                            <input type="time" id="time-TUE-end" name="time-TUE-end" class="form-control mb-3 time-input" placeholder="End time for TUE">
+                                        </div>
+                                        <div class="time-row" id="time-WED" style="display: none;">
+                                            <input type="time" id="time-WED-start" name="time-WED-start" class="form-control mb-3 time-input" placeholder="Start time for WED">
+                                            <span>_</span>
+                                            <input type="time" id="time-WED-end" name="time-WED-end" class="form-control mb-3 time-input" placeholder="End time for WED">
+                                        </div>
+                                        <div class="time-row" id="time-THU" style="display: none;">
+                                            <input type="time" id="time-THU-start" name="time-THU-start" class="form-control mb-3 time-input" placeholder="Start time for THU">
+                                            <span>_</span>
+                                            <input type="time" id="time-THU-end" name="time-THU-end" class="form-control mb-3 time-input" placeholder="End time for THU">
+                                        </div>
+                                        <div class="time-row" id="time-FRI" style="display: none;">
+                                            <input type="time" id="time-FRI-start" name="time-FRI-start" class="form-control mb-3 time-input" placeholder="Start time for FRI">
+                                            <span>_</span>
+                                            <input type="time" id="time-FRI-end" name="time-FRI-end" class="form-control mb-3 time-input" placeholder="End time for FRI">
+                                        </div>
+                                        <div class="time-row" id="time-SAT" style="display: none;">
+                                            <input type="time" id="time-SAT-start" name="time-SAT-start" class="form-control mb-3 time-input" placeholder="Start time for SAT">
+                                            <span>_</span>
+                                            <input type="time" id="time-SAT-end" name="time-SAT-end" class="form-control mb-3 time-input" placeholder="End time for SAT">
+                                        </div>
+                                        <div class="time-row" id="time-SUN" style="display: none;">
+                                            <input type="time" id="time-SUN-start" name="time-SUN-start" class="form-control mb-3 time-input" placeholder="Start time for SUN">
+                                            <span>_</span>
+                                            <input type="time" id="time-SUN-end" name="time-SUN-end" class="form-control mb-3 time-input" placeholder="End time for SUN">
+                                        </div>
+                                    </div>
+                                    <div class="col-md-12" style="margin-bottom: 20px">
+                                        <input type="text" class="form-control" name="block" placeholder="Block Section" />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="container-fluid">
+                        <div class="row">
+                            <div class="col-md-6 mb-3 text-start">
+                                <button type="button" class="btn form-control" data-bs-dismiss="modal" style="border-color: #05692D" onclick="resetForm()">Cancel</button>
+                            </div>
+                            <div class="col-md-6 mb-3 text-end">
+                                <button type="submit" id="register" name="register" class="btn1 form-control" style="background-color: #05692D; color: white" onclick="submitForm()">Register</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+
+<!-- Update Course Modal -->
+<form id="update-course">
+    <div class="modal fade" id="updateCourseModal" tabindex="-1" aria-labelledby="updateModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content modal-transparent">
+                <div class="modal-body">
+                    <div class="information-container">
+                        <h3>Update Course</h3>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="row">
+                                    <div class="col-md-12">
+                                        <input type="text" id="update_code" name="update_code" class="form-control mb-3" placeholder="Code" disabled>
+                                    </div>
+                                    <div class="col-md-12">
+                                        <select id="update_courseType" name="update_courseType" class="form-control mb-3">
+                                            <option value="" disabled selected>Select Course Type</option>
+                                            <option value="lecture">Lecture</option>
+                                            <option value="laboratory">Laboratory</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-12">
+                                        <textarea id="update_description" name="update_description" class="form-control mb-3" placeholder="Description" rows="6"></textarea>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="row">
+                                    <div class="col-md-12">
+                                        <input type="text" id="update_title" name="update_title" class="form-control mb-3" placeholder="Title">
+                                    </div>
+                                    <div class="col-md-12">
+                                        <input type="number" id="update_units" name="update_units" class="form-control mb-3" placeholder="Units" min="0">
+                                    </div>
+                                    <div class="col-md-12">
+                                        <div class="form-control mb-3">
+                                            <label for="schedule">Select Schedule</label>
+                                            <div style="column-count: 2; padding-right: -50px">
+                                                <label style="display: block;"><input type="checkbox" name="schedule" value="MON" onchange="toggleTimeInputs('MON')"> MON</label>
+                                                <label style="display: block;"><input type="checkbox" name="schedule" value="TUE" onchange="toggleTimeInputs('TUE')"> TUE</label>
+                                                <label style="display: block;"><input type="checkbox" name="schedule" value="WED" onchange="toggleTimeInputs('WED')"> WED</label>
+                                                <label style="display: block;"><input type="checkbox" name="schedule" value="THU" onchange="toggleTimeInputs('THU')"> THU</label>
+                                                <label style="display: block;"><input type="checkbox" name="schedule" value="FRI" onchange="toggleTimeInputs('FRI')"> FRI</label>
+                                                <label style="display: block;"><input type="checkbox" name="schedule" value="SAT" onchange="toggleTimeInputs('SAT')"> SAT</label>
+                                                <label style="display: block;"><input type="checkbox" name="schedule" value="SUN" onchange="toggleTimeInputs('SUN')"> SUN</label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-12 time-container">
+                                        <div class="time-containers">
+                                            <div class="time-inputs" id="times-MON" style="display: none;">
+                                                <input type="time" id="update-time-MON-start" name="update-time-MON-start" class="form-control mb-3" placeholder="Start time for MON">
+                                                <span> _ </span>
+                                                <input type="time" id="update-time-MON-end" name="update-time-MON-end" class="form-control mb-3" placeholder="End time for MON">
+                                            </div>
+                                            <div class="time-inputs" id="times-TUE" style="display: none;">
+                                                <input type="time" id="update-time-TUE-start" name="update-time-TUE-start" class="form-control mb-3" placeholder="Start time for TUE">
+                                                <span> _ </span>
+                                                <input type="time" id="update-time-TUE-end" name="update-time-TUE-end" class="form-control mb-3" placeholder="End time for TUE">
+                                            </div>
+                                            <div class="time-inputs" id="times-WED" style="display: none;">
+                                                <input type="time" id="update-time-WED-start" name="update-time-WED-start" class="form-control mb-3" placeholder="Start time for WED">
+                                                <span> _ </span>
+                                                <input type="time" id="update-time-WED-end" name="update-time-WED-end" class="form-control mb-3" placeholder="End time for WED">
+                                            </div>
+                                            <div class="time-inputs" id="times-THU" style="display: none;">
+                                                <input type="time" id="update-time-THU-start" name="update-time-THU-start" class="form-control mb-3" placeholder="Start time for THU">
+                                                <span> _ </span>
+                                                <input type="time" id="update-time-THU-end" name="update-time-THU-end" class="form-control mb-3" placeholder="End time for THU">
+                                            </div>
+                                            <div class="time-inputs" id="times-FRI" style="display: none;">
+                                                <input type="time" id="update-time-FRI-start" name="update-time-FRI-start" class="form-control mb-3" placeholder="Start time for FRI">
+                                                <span> _ </span>
+                                                <input type="time" id="update-time-FRI-end" name="update-time-FRI-end" class="form-control mb-3" placeholder="End time for FRI">
+                                            </div>
+                                            <div class="time-inputs" id="times-SAT" style="display: none;">
+                                                <input type="time" id="update-time-SAT-start" name="update-time-SAT-start" class="form-control mb-3" placeholder="Start time for SAT">
+                                                <span> _ </span>
+                                                <input type="time" id="update-time-SAT-end" name="update-time-SAT-end" class="form-control mb-3" placeholder="End time for SAT">
+                                            </div>
+                                            <div class="time-inputs" id="times-SUN" style="display: none;">
+                                                <input type="time" id="update-time-SUN-start" name="update-time-SUN-start" class="form-control mb-3" placeholder="Start time for SUN">
+                                                <input type="time" id="update-time-SUN-end" name="update-time-SUN-end" class="form-control mb-3" placeholder="End time for SUN">
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-12" style="margin-bottom: 20px">
+                                        <input type="text" class="form-control" id="update_block" name="update_block" placeholder="Block Section" />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="container-fluid">
+                        <div class="row">
+                            <div class="col-md-6 mb-3 text-start">
+                                <button type="button" class="btn form-control" data-bs-dismiss="modal" style="border-color: #05692D">Cancel</button>
+                            </div>
+                            <div class="col-md-6 mb-3 text-end">
+                                <button type="button" id="update" name="update" class="btn1 form-control" style="background-color: #05692D; color: white">Update</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+
+
+<script>
+    function toggleTimeInputs(day) {
+        const timeInputs = document.getElementById(`times-${day}`);
+        timeInputs.style.display = timeInputs.style.display === 'none' ? 'flex' : 'none';
+    }
+</script>
+
+
+
+<script>
+    document.addEventListener('DOMContentLoaded', (event) => {
+        function addScheduleListeners(formId, timePrefix) {
+            const checkboxes = document.querySelectorAll(`#${formId} input[name="schedule"]`);
+            checkboxes.forEach((checkbox) => {
+                checkbox.addEventListener('change', (event) => {
+                    const day = event.target.value;
+                    const timeInputs = document.getElementById(`time-${day}`);
+                    timeInputs.style.display = timeInputs.style.display === 'none' ? 'flex' : 'none';
+                });
+            });
+        }
+
+        addScheduleListeners('Create-course', 'time');
+        addScheduleListeners('update-course', 'update-time');
+    });
+
+    function resetForm() {
+        document.getElementById('Create-course').reset();
+        document.querySelectorAll('.time-input').forEach((input) => {
+            input.style.display = 'none';
+        });
+    }
+
+</script>

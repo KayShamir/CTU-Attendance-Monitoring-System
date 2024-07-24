@@ -1,0 +1,727 @@
+﻿﻿@using System.Web;
+@using System.Web.Mvc;
+@using System.Data;
+@using System.Data.SqlClient;
+@using System.IO;
+
+@{
+    ViewBag.Title = "Dashboard";
+
+    string connStr = @"Data Source=(LocalDB)\MSSQLLocalDB;AttachDbFilename=C:\Users\kaysh\source\repos\TimeInAttendance\TimeInAttendance\App_Data\AttendanceDB.mdf;Integrated Security=True";
+    List<dynamic> openCourses = new List<dynamic>();
+
+    using (var db = new SqlConnection(connStr))
+    {
+        db.Open();
+
+        string query = @"
+                SELECT
+                    c.COURSE_ID,
+                    c.COURSE_CODE,
+                    c.COURSE_TITLE,
+                    c.COURSE_DESCRIPTION,
+                    c.COURSE_TYPE,
+                    c.COURSE_SCHED,
+                    c.COURSE_TIME,
+                    c.COURSE_IMAGE_URL,
+                    c.COURSE_UNITS,
+                    c.COURSE_SECTION,
+                    sc.STUCOURSE_STATUS
+                FROM
+                    COURSE c
+                LEFT JOIN
+                    STUDENT_COURSE sc ON c.COURSE_ID = sc.COURSE_ID AND sc.STUDENT_ID = @stud_id
+                WHERE sc.STUCOURSE_STATUS IS NULL OR sc.STUCOURSE_STATUS != 'ENROLLED'
+                ORDER BY
+                    c.COURSE_ID
+                ";
+
+        using (var cmd = new SqlCommand(query, db))
+        {
+            cmd.Parameters.AddWithValue("@stud_id", Session["id"]);
+
+            using (var reader = cmd.ExecuteReader())
+            {
+                if (reader.HasRows)
+                {
+                    while (reader.Read())
+                    {
+                        openCourses.Add(new
+                        {
+                            Block = reader["COURSE_SECTION"].ToString(),
+                            Image = reader["COURSE_IMAGE_URL"].ToString(),
+                            Code = reader["COURSE_CODE"].ToString(),
+                            Title = reader["COURSE_TITLE"].ToString(),
+                            Schedule = reader["COURSE_SCHED"].ToString(),
+                            Time = reader["COURSE_TIME"].ToString(),
+                            Status = reader["STUCOURSE_STATUS"].ToString()
+                        });
+                    }
+                }
+            }
+        }
+
+
+    }
+}
+
+@{
+    List<dynamic> enrollCourses = new List<dynamic>();
+
+    using (var db = new SqlConnection(connStr))
+    {
+        db.Open();
+
+        string query = @"
+            SELECT
+                c.COURSE_ID,
+                c.COURSE_CODE,
+                c.COURSE_TITLE,
+                c.COURSE_DESCRIPTION,
+                c.COURSE_TYPE,
+                c.COURSE_SCHED,
+                c.COURSE_TIME,
+                c.COURSE_IMAGE_URL,
+                c.COURSE_UNITS,
+                c.COURSE_SECTION,
+                sc.STUCOURSE_STATUS
+            FROM
+                COURSE c
+            INNER JOIN
+                STUDENT_COURSE sc ON c.COURSE_ID = sc.COURSE_ID AND sc.STUDENT_ID = @stud_id AND sc.STUCOURSE_STATUS = 'ENROLLED'
+            ORDER BY
+                c.COURSE_ID
+            ";
+
+        using (var cmd = new SqlCommand(query, db))
+        {
+            cmd.Parameters.AddWithValue("@stud_id", Session["id"]);
+
+            using (var reader = cmd.ExecuteReader())
+            {
+                if (reader.HasRows)
+                {
+                    while (reader.Read())
+                    {
+                        enrollCourses.Add(new
+                        {
+                            Block = reader["COURSE_SECTION"].ToString(),
+                            Image = reader["COURSE_IMAGE_URL"].ToString(),
+                            Code = reader["COURSE_CODE"].ToString(),
+                            Title = reader["COURSE_TITLE"].ToString(),
+                            Schedule = reader["COURSE_SCHED"].ToString(),
+                            Time = reader["COURSE_TIME"].ToString(),
+                            Status = reader["STUCOURSE_STATUS"].ToString()
+                        });
+                    }
+                }
+            }
+        }
+
+
+    }
+}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Attendance Monitoring System</title>
+    <link rel="icon" type="image/x-icon" href="AMS-Logo.svg">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="attendance.css" />
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/sweetalert2@10.16.7/dist/sweetalert2.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@10"></script>
+</head>
+<body>
+    <div class="datetime" id="datetime"></div>
+    <div class="main-container">
+        <div class="dashboard-container">
+            <div class="head-container">
+                <img src="@Url.Content("~/Content/Images/AMS-Logo.svg")" alt="logo" class="d-block mx-auto">
+                <p style="font-size: 15px">Attendance Monitoring System</p>
+            </div>
+            <button type="button" class="btn btn-Enrolled" onclick="openTab(event, 'Enrolled')" id="defaultOpen">
+                <img src="@Url.Content("~/Content/Images/Bookmark.png")" alt="Dashboard Icon" class="button-icon"> Enrolled Courses
+            </button>
+            <button type="button" class="btn btn-Open" onclick="openTab(event, 'Open')">
+                <img src="@Url.Content("~/Content/Images/Open Book.png")" alt="Courses Icon" class="button-icon"> Open Courses
+            </button>
+            <div class="logout-container">
+                <button type="button" class="btn btn-Logout" id="logoutButton">
+                    <img src="@Url.Content("~/Content/Images/Logout.png")" alt="Logout Icon" class="button-icon"> Logout
+                </button>
+            </div>
+        </div>
+
+        <!--Dashboard Main Container-->
+        <div class="dash-container">
+            <div id="Enrolled" class="tabcontent">
+                <div class="row pt-5">
+                    @if (enrollCourses.Any())
+                    {
+                        for (var i = 0; i < enrollCourses.Count; i++)
+                        {
+                            var course = enrollCourses[i];
+
+                            <div class="col-md-4 mb-4">
+                                <div class="card" style="height: 25rem; width: 20rem; cursor: pointer;" onclick="showCourseDetails('@HttpUtility.UrlEncode(course.Code)', '@HttpUtility.UrlEncode(course.Block)', '@HttpUtility.UrlEncode(course.Status)')">
+                                    <div style="height: 15rem; overflow: hidden;">
+                                        <img src="../Home/Image?filename=@HttpUtility.UrlEncode(course.Image)" class="card-img-top w-100 h-100" style="object-fit: cover;" alt="Course Image">
+                                    </div>                                       
+                                    <div class="card-body">
+                                        <h6 class="card-title text-truncate fs-10">@course.Title</h6>
+                                        <h6 class="card-subtitle mb-2 text-truncate fs-16 text-muted">@course.Code</h6>
+                                        <p class="card-text">
+                                            <span class="d-block text-truncate fs-20 text-muted">@course.Block</span>
+                                            <span class="d-block text-truncate fs-20 text-muted">@course.Schedule | @course.Time</span>
+                                            <span class="d-block text-truncate fs-20 text-muted">@course.Status</span>
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    }
+                    else
+                    {
+                        <div class="col-12">
+                            <p class="text-center">No Subjects available.</p>
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <!--Courses Main Container-->
+            <div id="Open" class="tabcontent">
+                <div class="row pt-5">
+                    @if (openCourses.Any())
+                    {
+                        for (var i = 0; i < openCourses.Count; i++)
+                        {
+                            var course = openCourses[i];
+
+                            <div class="col-md-4 mb-4">
+                                <div class="card" style="height: 25rem; width: 20rem; cursor: pointer;" onclick="showCourseDetails('@HttpUtility.UrlEncode(course.Code)', '@HttpUtility.UrlEncode(course.Block)', '@HttpUtility.UrlEncode(course.Status)')">
+                                    <div style="height: 15rem; overflow: hidden;">
+                                        <img src="../Home/Image?filename=@HttpUtility.UrlEncode(course.Image)" class="card-img-top w-100 h-100" style="object-fit: cover;" alt="Course Image">
+                                    </div>   
+                                    <div class="card-body">
+                                        <h6 class="card-title text-truncate fs-10">@course.Title</h6>
+                                        <h6 class="card-subtitle mb-2 text-truncate fs-16 text-muted">@course.Code</h6>
+                                        <p class="card-text">
+                                            <span class="d-block text-truncate fs-20 text-muted">@course.Block</span>
+                                            <span class="d-block text-truncate fs-20 text-muted">@course.Schedule | @course.Time</span>
+                                            <span class="d-block text-truncate fs-20 text-muted">@course.Status</span>
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    }
+                    else
+                    {
+                        <div class="col-12">
+                            <p class="text-center">No Subjects available.</p>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <div class="modal fade" id="courseModal" tabindex="-1" aria-labelledby="courseModalLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="courseModalLabel">Course Details</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p><strong>Course Code:</strong> <span id="modalCourseCode"></span></p>
+                        <p><strong>Section:</strong> <span id="modalSection"></span></p>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                        <button type="button" class="btn btn-primary" id="enrollButton">Enroll</button>
+                        <button type="button" class="btn btn-danger" id="unenrollButton">Unenroll</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+            function openTab(evt, tabName) {
+                var i, tabcontent, tablinks;
+                tabcontent = document.getElementsByClassName("tabcontent");
+                for (i = 0; i < tabcontent.length; i++) {
+                    tabcontent[i].style.display = "none";
+                }
+                tablinks = document.getElementsByClassName("btn");
+                for (i = 0; i < tablinks.length; i++) {
+                    tablinks[i].className = tablinks[i].className.replace(" active", "");
+                }
+                document.getElementById(tabName).style.display = "block";
+                evt.currentTarget.className += " active";
+            }
+
+            document.getElementById("defaultOpen").click();
+
+            function updateDateTime() {
+                var now = new Date();
+                var options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' };
+                var datetime = now.toLocaleString('en-US', options);
+                document.getElementById('datetime').innerText = datetime;
+            }
+
+            setInterval(updateDateTime, 1000);
+            updateDateTime();
+
+            function showCourseDetails(courseCode, section, status) {
+                document.getElementById('modalCourseCode').textContent = courseCode;
+                document.getElementById('modalSection').textContent = section;
+
+                if (status == 'PENDING') {
+                    console.log(status)
+                    document.getElementById("enrollButton").style.display = "none";
+                    document.getElementById("unenrollButton").style.display = "block";
+                }
+                else {
+                    document.getElementById("enrollButton").style.display = "block";
+                    document.getElementById("unenrollButton").style.display = "none";
+                }
+                var myModal = new bootstrap.Modal(document.getElementById('courseModal'));
+                myModal.show();
+            }
+
+    </script>
+</body>
+</html>
+<script src="~/Scripts/MyScript/jquery-3.7.1.min.js"></script>
+<script src="~/Scripts/MyScript/student.js"></script>
+<style>
+
+    body {
+        font-family: 'Poppins', sans-serif;
+        background-image: url('@Url.Content("~/Content/Images/Background.jpg")');
+        background-size: cover;
+        background-repeat: no-repeat;
+        background-position: center center;
+        height: 100vh;
+        margin: 0;
+        overflow: hidden;
+        position: relative;
+    }
+
+    .logout-container {
+        margin-top: auto; /* Pushes logout button to the bottom */
+        text-align: center;
+    }
+
+    .btn-Logout:focus {
+        outline: none;
+    }
+
+    .card-container {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-between;
+        padding: 10px;
+    }
+
+    .card {
+        width: calc(33% - 20px);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 10px;
+        margin-bottom: 20px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        border-radius: 10px;
+        background-color: #fff;
+    }
+
+    .card:hover{
+        transform: scale(1.05);
+
+    }
+
+    .truncate {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+        .card .img img {
+            width: 100%;
+            height: 30vh;
+            max-height: 200px;
+            object-fit: cover;
+            border-radius: 10px;
+        }
+
+        .card .card-body {
+            width: 100%;
+        }
+
+        .card .course-title-code {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 0px;
+        }
+
+        .card .course-title {
+            flex: 1;
+            font-weight: bold;
+            text-align: left;
+        }
+
+        .card .course-code {
+            flex: 1;
+            text-align: right;
+        }
+
+        .card .schedule-block-time {
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .card .course-block {
+            flex: 1;
+            text-align: left;
+        }
+
+        .card .schedule-time {
+            flex: 1;
+            text-align: right;
+            font-weight:100;
+            color: #072C12;
+            font-size: 14px;
+        }
+
+    .dashboard-container .head-container {
+        text-align: center;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+    }
+
+        .dashboard-container .head-container img {
+            margin-top: 10px;
+            max-width: 80px;
+            margin-bottom: 20px;
+        }
+
+        .dashboard-container .head-container h1 {
+            font-size: 10px;
+            margin-bottom: 10px;
+        }
+
+    .main-container {
+        display: flex;
+        align-items: flex-start;
+        position: absolute;
+        top: 15px;
+        left: 8px;
+        width: calc(100% - 30px);
+    }
+
+    .dashboard-container {
+        height: 92vh;
+        background-color: rgba(227, 247, 231, 0.678);
+        display: flex;
+        flex-direction: column;
+        width: 170px;
+        border-radius: 15px;
+        margin-right: 10px;
+        margin-left: 10px;
+    }
+
+        .dashboard-container > * {
+            margin-bottom: 10px;
+        }
+
+        .dashboard-container .btn {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+            outline: none;
+            border: none;
+        }
+
+        .dashboard-container .btn-dashboard {
+            margin-top: 20px;
+            font-size: 13px;
+            color: #072C12;
+        }
+
+        .dashboard-container .btn-profiles {
+            font-size: 13px;
+        }
+
+        .dashboard-container .btn-settings {
+            font-size: 13px;
+        }
+
+        .dashboard-container .btn-about {
+            font-size: 13px;
+        }
+
+        .dashboard-container .btn-courses {
+            font-size: 13px;
+        }
+
+        .dashboard-container .button-icon {
+            width: 30px;
+            height: 30px;
+            margin-right: 10px;
+            margin-left: 17px;
+        }
+
+        .dashboard-container button:hover {
+            color: #033f1b;
+        }
+
+    .dash-container .img{
+        height: 30vh;
+    }
+
+    .dash-container {
+        flex: 1;
+        height: 92vh;
+        background-color: rgba(227, 247, 231, 0.678);
+        margin-left: 15px;
+        padding: 10px;
+        border-radius: 20px;
+        overflow-y: auto;
+        padding-bottom: 20px;
+    }
+
+    .tabcontent {
+        align-items: center;
+        padding: 15px;
+    }
+
+    .tabcontent .create-course{
+        margin-bottom: 10px;
+    }
+
+    .datetime {
+        margin-top: -20px;
+        position: fixed;
+        top: 40px;
+        left: 225px;
+        font-size: 16px;
+        font-weight: bold;
+        color: #072c12;
+        padding-top: 5px;
+        padding-left: 10px;
+        padding-bottom: 10px;
+        padding-right: 10px;
+        border-radius: 10px;
+        z-index: 4;
+        font-weight: 300;
+    }
+
+    .dashboard-container .button-icon {
+        transition: filter 0.3s ease;
+    }
+
+        .dashboard-container .button-icon:hover {
+            filter: invert(70%);
+        }
+
+    .dashboard-container button.active,
+    .dashboard-container button:focus {
+        box-shadow: 0 0 0 0.2rem rgba(13, 117, 34, 0.5);
+    }
+
+    ::-webkit-scrollbar {
+        width: 10px;
+    }
+
+    ::-webkit-scrollbar-track {
+        background: #48d65485;
+    }
+
+    ::-webkit-scrollbar-thumb {
+        border-radius: 10px;
+        background: rgb(39, 160, 63);
+    }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #5ac23a;
+        }
+
+
+</style>
+
+<!-- Your form goes here -->
+<!-- Create Course Modal -->
+<form id="Create-course" method="post" action="../Home/Admin" enctype="multipart/form-data">
+    <div class="modal fade" id="createCourseModal" tabindex="-1" aria-labelledby="registrationModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content modal-transparent">
+                <div class="modal-body">
+                    <div class="information-container">
+                        <h3>Create Course</h3>
+                        <div></div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="row">
+                                    <div class="col-md-12">
+                                        <input type="text" id="code" name="code" class="form-control mb-3" placeholder="Code">
+                                    </div>
+                                    <div class="col-md-12">
+                                        <select id="courseType" name="courseType" class="form-control mb-3">
+                                            <option value="" disabled selected>Select Course Type</option>
+                                            <option value="lecture">Lecture</option>
+                                            <option value="laboratory">Laboratory</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-12" style="margin-bottom: 20px">
+                                        <label for="img">Select Class Cover Photo</label>
+                                        <input type="file" class="form-control" name="img" accept="image/jpg,image/bmp,image/png,image/gif" required />
+                                    </div>
+                                    <div class="col-md-12">
+                                        <textarea id="description" name="description" class="form-control mb-3" placeholder="Description" rows="6"></textarea>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="row">
+                                    <div class="col-md-12">
+                                        <input type="text" id="title" name="title" class="form-control mb-3" placeholder="Title">
+                                    </div>
+                                    <div class="col-md-12">
+                                        <input type="number" id="units" name="units" class="form-control mb-3" placeholder="Units" min="0">
+                                    </div>
+                                    <div class="col-md-12">
+                                        <div class="form-control mb-3">
+                                            <label for="schedule">Select Schedule</label>
+                                            <div style="column-count: 2;  padding-right: -50px">
+                                                <label style="display: block;"><input type="checkbox" name="schedule" value="MON"> MON</label>
+                                                <label style="display: block;"><input type="checkbox" name="schedule" value="TUE"> TUE</label>
+                                                <label style="display: block;"><input type="checkbox" name="schedule" value="WED"> WED</label>
+                                                <label style="display: block;"><input type="checkbox" name="schedule" value="THU"> THU</label>
+                                                <label style="display: block;"><input type="checkbox" name="schedule" value="FRI"> FRI</label>
+                                                <label style="display: block;"><input type="checkbox" name="schedule" value="SAT"> SAT</label>
+                                                <label style="display: block;"><input type="checkbox" name="schedule" value="SUN"> SUN</label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-12">
+                                        <input type="time" id="time" name="time" class="form-control mb-3" placeholder="Time">
+                                    </div>
+                                    <div class="col-md-12" style="margin-bottom: 20px">
+                                        <input type="text" class="form-control" name="block" placeholder="Block Section" />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="container-fluid">
+                        <div class="row">
+                            <div class="col-md-6 mb-3 text-start">
+                                <button type="button" class="btn form-control" data-bs-dismiss="modal" style="border-color: #05692D" onclick="resetForm()">Cancel</button>
+                            </div>
+                            <div class="col-md-6 mb-3 text-end">
+                                <button type="submit" id="register" name="register" class="btn1 form-control" style="background-color: #05692D; color: white" onclick="submitForm()">Register</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+<div class="modal fade" id="successModal" tabindex="-1" aria-labelledby="successModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content modal-transparent">
+            <div class="modal-body">
+                <div class="success-registration">
+                    <h1>Welcome to CTU Attendance Monitoring System</h1>
+                    <div class="student-picture"></div>
+                    <div class="success"><img src="ver-acc.svg" alt="Success Icon" class="success-logo"><p>Success!</p></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<!-- Update Course Modal -->
+<div class="modal fade" id="updateCourseModal" tabindex="-1" aria-labelledby="updateModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content modal-transparent">
+            <div class="modal-body">
+                <div class="information-container">
+                    <h3>Update Course</h3>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="row">
+                                <div class="col-md-12">
+                                    <input type="text" id="update_code" name="update_code" class="form-control mb-3" placeholder="Code" disabled>
+                                </div>
+                                <div class="col-md-12">
+                                    <select id="update_courseType" name="update_courseType" class="form-control mb-3">
+                                        <option value="" disabled selected>Select Course Type</option>
+                                        <option value="lecture">Lecture</option>
+                                        <option value="laboratory">Laboratory</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-12">
+                                    <textarea id="update_description" name="update_description" class="form-control mb-3" placeholder="Description" rows="6"></textarea>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="row">
+                                <div class="col-md-12">
+                                    <input type="text" id="update_title" name="update_title" class="form-control mb-3" placeholder="Title">
+                                </div>
+                                <div class="col-md-12">
+                                    <input type="number" id="update_units" name="update_units" class="form-control mb-3" placeholder="Units" min="0">
+                                </div>
+                                <div class="col-md-12">
+                                    <div class="form-control mb-3">
+                                        <label for="schedule">Select Schedule</label>
+                                        <div style="column-count: 2; padding-right: -50px">
+                                            <label style="display: block;"><input type="checkbox" name="schedule" value="MON"> MON</label>
+                                            <label style="display: block;"><input type="checkbox" name="schedule" value="TUE"> TUE</label>
+                                            <label style="display: block;"><input type="checkbox" name="schedule" value="WED"> WED</label>
+                                            <label style="display: block;"><input type="checkbox" name="schedule" value="THU"> THU</label>
+                                            <label style="display: block;"><input type="checkbox" name="schedule" value="FRI"> FRI</label>
+                                            <label style="display: block;"><input type="checkbox" name="schedule" value="SAT"> SAT</label>
+                                            <label style="display: block;"><input type="checkbox" name="schedule" value="SUN"> SUN</label>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-12">
+                                    <input type="time" id="update_time" name="update_time" class="form-control mb-3" placeholder="Time">
+                                </div>
+                                <div class="col-md-12" style="margin-bottom: 20px">
+                                    <input type="text" class="form-control" id="update_block" name="update_block" placeholder="Block Section" />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="container-fluid">
+                    <div class="row">
+                        <div class="col-md-6 mb-3 text-start">
+                            <button type="button" class="btn form-control" data-bs-dismiss="modal" style="border-color: #05692D">Cancel</button>
+                        </div>
+                        <div class="col-md-6 mb-3 text-end">
+                            <button type="button" id="update" name="update" class="btn1 form-control" style="background-color: #05692D; color: white">Update</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
