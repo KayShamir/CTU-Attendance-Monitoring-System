@@ -12,6 +12,12 @@ using System.Collections.Specialized;
 using System.Net.Http.Headers;
 using System.Net.Http;
 using System.Threading.Tasks;
+using RestSharp;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
+using System.Text;
+using System.Web.Services.Description;
+
 
 
 
@@ -310,10 +316,13 @@ namespace Attendance.Controllers
         }
 
         [HttpPost]
-        public ActionResult Unenroll(string student_id, string course_code, string course_section)
+        public async Task<ActionResult> Unenroll(string student_id, string student_name, string course_code, string course_section, string contact)
         {
             try
             {
+                contact = contact.StartsWith("0") ? contact.Substring(1) : contact;
+
+
                 using (var db = new SqlConnection(connStr))
                 {
                     db.Open();
@@ -337,6 +346,35 @@ namespace Attendance.Controllers
                         cmd.ExecuteNonQuery();
                     }
                 }
+                var message = $"Dear {student_name},\n\nWe regret to inform you that your request to join {course_code} {course_section} has been denied. Should you have any concerns, feel free to contact the department.\n\nBest regards,\nProf. Rey Caliao";
+
+                long number = long.Parse("63" + contact);
+
+                var client = new HttpClient();
+                client.BaseAddress = new Uri("https://5y9mzy.api.infobip.com");
+
+                client.DefaultRequestHeaders.Add("Authorization", "App d8abe1ab1300d60a2cd89527ec7a1572-18705815-11c2-4bfd-ae31-9152d3cd83e9");
+                client.DefaultRequestHeaders.Add("Accept", "application/json");
+
+                var body = $@"{{
+                                ""messages"": [
+                                    {{
+                                        ""destinations"": [
+                                            {{
+                                                ""to"": ""{number}""
+                                            }}
+                                        ],
+                                        ""from"": ""CCICT"",
+                                        ""text"": ""{message.Replace("\"", "\\\"").Replace("\n", "\\n")}""
+                                    }}
+                                ]
+                            }}"; 
+                var content = new StringContent(body, Encoding.UTF8, "application/json");
+
+                var response = await client.PostAsync("/sms/2/text/advanced", content);
+
+                var responseContent = await response.Content.ReadAsStringAsync();
+
                 return Json(new { success = true, message = "Student Application Denied" });
 
             }
@@ -348,7 +386,7 @@ namespace Attendance.Controllers
         }
 
         [HttpPost]
-        public async Task<ActionResult> Enroll(string student_id, string course_code, string course_section, string contact)
+        public async Task<ActionResult> Enroll(string student_id, string student_name, string course_code, string course_section, string contact)
         {
             try
             {
@@ -379,7 +417,36 @@ namespace Attendance.Controllers
                     }
                 }
 
-                return Json(new { success = true, message = "Student Application Approved" });
+                long number = long.Parse("63" + contact);
+                string message = $"Dear {student_name},\n\nCongratulations! You have been approved for the course {course_code} {course_section}. We look forward to your active participation.\n\nBest regards,\nProf. Rey Caliao";
+
+                var client = new HttpClient();
+                client.BaseAddress = new Uri("https://5y9mzy.api.infobip.com");
+
+                client.DefaultRequestHeaders.Add("Authorization", "App d8abe1ab1300d60a2cd89527ec7a1572-18705815-11c2-4bfd-ae31-9152d3cd83e9");
+                client.DefaultRequestHeaders.Add("Accept", "application/json");
+
+                var body = $@"{{
+                                ""messages"": [
+                                    {{
+                                        ""destinations"": [
+                                            {{
+                                                ""to"": ""{number}""
+                                            }}
+                                        ],
+                                        ""from"": ""CCICT"",
+                                        ""text"": ""{message.Replace("\"", "\\\"").Replace("\n", "\\n")}""
+                                    }}
+                                ]
+                            }}";
+                var content = new StringContent(body, Encoding.UTF8, "application/json");
+
+                var response = await client.PostAsync("/sms/2/text/advanced", content);
+
+                var responseContent = await response.Content.ReadAsStringAsync();
+
+                return Json(new { success = true, message = "Student Application Approved " });
+
 
             }
             catch (Exception ex)
@@ -468,7 +535,7 @@ namespace Attendance.Controllers
                                     INSERT INTO attendance (student_id, course_id, attendance_date)
                                     SELECT student_id, course_id, GETDATE() AS attendance_date
                                     FROM student_course
-                                    WHERE course_id = @course_id;
+                                    WHERE course_id = @course_id AND stucourse_status = 'ENROLLED';
                                 ";
 
                     using (var cmd = new SqlCommand(query, db))
@@ -481,6 +548,105 @@ namespace Attendance.Controllers
                     }
                 }
                 return Json(new { success = true });
+
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = "Error: " + ex.Message });
+            }
+
+        }
+
+        [HttpPost]
+        public ActionResult Profiles(string course_id)
+        {
+            try
+            {
+                var profileList = new List<Dictionary<string, object>>();
+
+                using (var db = new SqlConnection(connStr))
+                {
+                    db.Open();
+
+                    string query = @"
+                                    SELECT 
+                                        'TO BE DROPPED' AS Status,
+                                        s.student_id AS ID,
+                                        CONCAT(
+                                                s.student_lastname, ', ', 
+                                                s.student_firstname, ' ', 
+                                                LEFT(s.student_midname, 1), '.'
+                                            ) AS Student_Fullname,
+                                        s.student_contact_no AS Student_Contact,
+                                        g.guardian_name AS Guardian_Fullname,
+                                        g.guardian_contact AS Guardian_Contact,
+                                        g.guardian_rel AS Relationship_to_Guardian,
+                                        sc.stucourse_totallate AS Total_Late,
+                                        sc.stucourse_totalabsent AS Total_Absent
+                                    FROM 
+                                        dbo.student_course sc
+                                    JOIN 
+                                        dbo.student s ON sc.student_id = s.student_id AND sc.course_id = @course_id
+                                    JOIN 
+                                        dbo.guardian g ON s.guardian_id = g.guardian_id
+                                    JOIN 
+                                        dbo.[drop] d ON sc.student_id = d.stud_id AND sc.course_id = d.course_id
+
+                                    UNION
+
+                                    SELECT 
+                                        sc.stucourse_status AS Status,
+                                        s.student_id AS ID,
+                                        CONCAT(
+                                                s.student_lastname, ', ', 
+                                                s.student_firstname, ' ', 
+                                                LEFT(s.student_midname, 1), '.'
+                                            ) AS Student_Fullname,    
+                                        s.student_contact_no AS Student_Contact,
+                                        g.guardian_name AS Guardian_Fullname,
+                                        g.guardian_contact AS Guardian_Contact,
+                                        g.guardian_rel AS Relationship_to_Guardian,
+                                        sc.stucourse_totallate AS Total_Late,
+                                        sc.stucourse_totalabsent AS Total_Absent
+                                    FROM 
+                                        dbo.student_course sc
+                                    JOIN 
+                                        dbo.student s ON sc.student_id = s.student_id AND sc.course_id = @course_id
+                                    JOIN 
+                                        dbo.guardian g ON s.guardian_id = g.guardian_id
+                                    LEFT JOIN 
+                                        dbo.[drop] d ON sc.student_id = d.stud_id AND sc.course_id = d.course_id
+                                    WHERE 
+                                        d.drop_id IS NULL;
+                                ";
+
+                    using (var cmd = new SqlCommand(query, db))
+                    {
+                        cmd.Parameters.AddWithValue("@course_id", course_id);
+
+                        using (var reader = cmd.ExecuteReader())
+                        {
+                            while (reader.Read())
+                            {
+                                var list = new Dictionary<string, object>()
+                                {
+                                    {"Status", reader["Status"].ToString() },
+                                    {"ID", reader["ID"].ToString() },
+                                    {"Student_Fullname", reader["Student_Fullname"].ToString() },
+                                    {"Student_Contact", reader["Student_Contact"].ToString() },
+                                    {"Guardian_Fullname", reader["Guardian_Fullname"].ToString() },
+                                    {"Guardian_Contact", reader["Guardian_Contact"].ToString() },
+                                    {"Relationship_to_Guardian", reader["Relationship_to_Guardian"].ToString() },
+                                    {"Total_Late", reader["Total_Late"].ToString() },
+                                    {"Total_Absent", reader["Total_Absent"].ToString() }
+                                };
+
+                                profileList.Add(list);
+                            }
+                        }
+                    }
+                }
+                return Json(profileList, JsonRequestBehavior.AllowGet);
 
             }
             catch (Exception ex)

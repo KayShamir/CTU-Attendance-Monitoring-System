@@ -163,12 +163,7 @@
                         <div class="d-flex align-items-center">
                             <img id="calendar-icon" src="@Url.Content("~/Content/Images/Calendar.svg")" style="width: 25px; margin-top: -5px;" />
                             <input type="date" id="selected-date" class="form-control mx-3" style="width: auto; font-size: 9px;" />
-                            <img src="@Url.Content("~/Content/Images/Slider.svg")" style="width: 25px; margin-left: 600px" />
-                            <select class="form-control mx-3" style="width: auto; font-size: 9px;">
-                                <option>Attendance Report</option>
-                                <option>Tardiness Report</option>
-                                <option>Absences Report</option>
-                            </select>
+                            
                         </div>
                     </div>
                     <div class="row mt-2">
@@ -248,9 +243,82 @@
 
             <!--Profiles Main Container-->
             <div id="Profiles" class="tabcontent">
-                <button type="button" class="btn btn-primary">
-                    Profile
-                </button>
+                <div id="profile-content" class="row pt-5">
+
+                    @if (courses.Any())
+                    {
+                        for (var i = 0; i < courses.Count; i++)
+                        {
+                            var course = courses[i];
+
+                            <div class="col-md-4 mb-4">
+
+                                <div class="card card-profile" style="height: 25rem; width: 20rem; cursor: pointer;" data-id="@course.Id" data-code="@course.Code" data-section="@course.Block" data-time="@course.Time" data-sched="@course.Schedule">
+                                    <div style="height: 15rem; overflow: hidden;">
+                                        <img src="../Home/Image?filename=@HttpUtility.UrlEncode(course.Image)" class="card-img-top w-100 h-100" style="object-fit: cover;" alt="Course Image">
+                                    </div>
+                                    <div class="card-body">
+                                        <h6 class="card-title text-truncate fs-10">@course.Title</h6>
+                                        <h6 class="card-subtitle mb-2 text-truncate fs-16 text-muted">@course.Code</h6>
+                                        <p class="card-text">
+                                            <span class="d-block text-truncate fs-20 text-muted">@course.Block</span>
+                                            <span class="d-block text-truncate fs-20 text-muted">@course.Schedule | @course.Time</span>
+                                        </p>
+                                    </div>
+                                </div>
+
+                            </div>
+
+                        }
+                    }
+                    else
+                    {
+                        <p>No Subjects available.</p>
+                    }
+                </div>
+                <div id="profile-body-content" class="container" style="display: none;">
+                    <div class="row align-items-center">
+                        <div class="d-flex align-items-center">
+                            <img id="back-profile" src="@Url.Content("~/Content/Images/Left.svg")" style="width: 25px; margin-top: -15px; cursor: pointer;" />
+                            <p id="profile-selected-course" class="mx-3"></p>
+                            <p id="profile-selected-section" class="mx-3"></p>
+                            <p id="profile-selected-sched" class="mx-3"></p>
+                        </div>
+                    </div>
+                    <div class="row align-items-center">
+                        <div class="d-flex align-items-center">
+                            <img src="@Url.Content("~/Content/Images/Slider.svg")" style="width: 25px; margin-left: 850px" />
+                            <select id="sortOptions" class="form-control mx-3" style="width: auto; font-size: 9px;">
+                                <option>Name</option>
+                                <option>Late</option>
+                                <option>Absent</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="row mt-2">
+                        <div class="col-12">
+                            <div class="table-responsive">
+                                <table id="profileTable" class="table table-hover table-striped align-middle">
+                                    <thead style="font-size: 12px; font-weight: normal; text-align: center; ">
+                                        <tr>
+                                            <th style="width: 10%; background-color: #072c12; color: white;">Status</th>
+                                            <th style="width: 10%; background-color: #072c12; color: white;">ID</th>
+                                            <th style="width: 20%; background-color: #072c12; color: white;">Student Fullname</th>
+                                            <th style="width: 10%; background-color: #072c12; color: white;">Student Contact</th>
+                                            <th style="width: 15%; background-color: #072c12; color: white;">Guardian Fullname</th>
+                                            <th style="width: 10%; background-color: #072c12; color: white;">Guardian Contact</th>
+                                            <th style="width: 10%; background-color: #072c12; color: white;">Relationship to Guardian</th>
+                                            <th style="width: 12.5%; background-color: #072c12; color: white;">Total Late</th>
+                                            <th style="width: 12.5%; background-color: #072c12; color: white;">Total Absent</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <!--Notif Main Container-->
@@ -267,8 +335,8 @@
                                 <p>@notification.Fullname wants to join the class @notification.Code @notification.Section</p>
                             </div>
                             <div class="notification-buttons">
-                                <button type="button" class="btn btn-success approveButton" data-student="@notification.Id" data-code="@notification.Code" data-section="@notification.Section" data-contact="@notification.Contact">Approve</button>
-                                <button type="button" class="btn btn-danger denyButton" data-student="@notification.Id" data-code="@notification.Code" data-section="@notification.Section" data-contact="@notification.Contact">Deny</button>
+                                <button type="button" class="btn btn-success approveButton" data-student="@notification.Id" data-name="@notification.Fullname" data-code="@notification.Code" data-section="@notification.Section" data-contact="@notification.Contact">Approve</button>
+                                <button type="button" class="btn btn-danger denyButton" data-student="@notification.Id" data-name="@notification.Fullname" data-code="@notification.Code" data-section="@notification.Section" data-contact="@notification.Contact">Deny</button>
                             </div>
                         </div>
                     }

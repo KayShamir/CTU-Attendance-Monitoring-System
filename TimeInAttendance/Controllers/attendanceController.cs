@@ -1,9 +1,10 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Data.SqlClient;
-using System.Linq;
-using System.Web;
+using System.Net.Http;
+using System.Text;
+using System.Threading.Tasks;
 using System.Web.Mvc;
+using System.Web.Services.Description;
 
 namespace Attendance_System.Controllers
 {
@@ -28,7 +29,7 @@ namespace Attendance_System.Controllers
         }
 
         [HttpPost]
-        public ActionResult TimeIn(string student_id, string course_id)
+        public async Task<ActionResult> TimeIn(string student_id, string course_id)
         {
             try
             {
@@ -40,6 +41,12 @@ namespace Attendance_System.Controllers
                     string query = @"
                             SELECT 
                                 s.student_id,
+                                s.student_firstname,
+                                s.student_lastname,
+                                g.guardian_name,
+                                g.guardian_contact,
+                                c.course_title,
+                                c.course_section,
                                 CASE 
                                     WHEN a.attendance_time_in IS NOT NULL THEN 1
                                     ELSE 0
@@ -48,6 +55,10 @@ namespace Attendance_System.Controllers
                                 student s
                             INNER JOIN 
                                 attendance a ON s.student_id = a.student_id AND a.course_id = @course_id AND a.attendance_date = CAST(GETDATE() AS DATE)
+                            INNER JOIN 
+                                guardian g ON s.guardian_id = g.guardian_id
+                            INNER JOIN 
+                                course c ON a.course_id = c.course_id
                             WHERE s.student_id = @student_id
                             ";
 
@@ -61,6 +72,13 @@ namespace Attendance_System.Controllers
                             if (reader.Read())
                             {
                                 int status = (int)reader["status"];
+                                var guardian_name = reader["guardian_name"].ToString();
+                                var student_name = reader["student_firstname"].ToString() + " " + reader["student_lastname"].ToString(); ;
+                                var title = reader["course_title"].ToString();
+                                var section = reader["course_section"].ToString();
+                                var contact = reader["guardian_contact"].ToString();
+
+                                contact = contact.StartsWith("0") ? contact.Substring(1) : contact;
 
                                 if (status == 0)
                                 {
@@ -74,7 +92,14 @@ namespace Attendance_System.Controllers
                                                                         END
                                                 WHERE student_id = @student_id 
                                                   AND course_id = @course_id 
-                                                  AND attendance_date = CAST(GETDATE() AS DATE)";
+                                                  AND attendance_date = CAST(GETDATE() AS DATE);
+
+                                                SELECT attendance_status
+                                                    FROM attendance
+                                                    WHERE student_id = @student_id 
+                                                      AND course_id = @course_id 
+                                                      AND attendance_date = CAST(GETDATE() AS DATE);
+                                    ";
 
                                     using (var updateCmd = new SqlCommand(updateQuery, db))
                                     {
@@ -82,7 +107,52 @@ namespace Attendance_System.Controllers
                                         updateCmd.Parameters.AddWithValue("@course_id", course_id);
                                         updateCmd.Parameters.AddWithValue("@student_id", student_id);
 
-                                        updateCmd.ExecuteNonQuery();
+                                        var attendanceStatus = updateCmd.ExecuteScalar()?.ToString();
+
+                                        var client = new HttpClient();
+                                        client.BaseAddress = new Uri("https://5y9mzy.api.infobip.com");
+
+                                        client.DefaultRequestHeaders.Add("Authorization", "App d8abe1ab1300d60a2cd89527ec7a1572-18705815-11c2-4bfd-ae31-9152d3cd83e9");
+                                        client.DefaultRequestHeaders.Add("Accept", "application/json");
+
+                                        string message;
+                                        long number = long.Parse("63" + contact);
+
+                                        if (attendanceStatus == "ON TIME")
+                                        {
+                                            message = $"Dear {guardian_name},\n\nWe appreciate {student_name} consistently arriving on time for {title} {section}. This punctuality is valued.\n\nThank you,\nProf. Rey Caliao";
+
+                                        }
+                                        else if (attendanceStatus == "LATE")
+                                        {
+                                            message = $"Dear {guardian_name},\n\nWe would like to inform you that {student_name} was marked late for the class {title} {section} on {DateTime.Now.ToString("MMMM dd, yyyy")}. Please ensure that he/she arrives on time to avoid further issues.\n\nThank you,\nProf. Rey Caliao";
+
+                                        }
+                                        else
+                                        {
+                                            message = $"Dear {guardian_name},\n\nWe regret to inform you that {student_name} was marked absent for the class {title} {section} on {DateTime.Now.ToString("MMMM dd, yyyy")}. Please provide any supporting documents if he/she has a valid reason for the absence.\n\nThank you,\nProf. Rey Caliao";
+
+                                        }
+
+                                        var body = $@"{{
+                                                        ""messages"": [
+                                                            {{
+                                                                ""destinations"": [
+                                                                    {{
+                                                                        ""to"": ""{number}""
+                                                                    }}
+                                                                ],
+                                                                ""from"": ""CCICT"",
+                                                                ""text"": ""{message.Replace("\"", "\\\"").Replace("\n", "\\n")}""
+                                                            }}
+                                                        ]
+                                                    }}"; 
+                                        var content = new StringContent(body, Encoding.UTF8, "application/json");
+
+                                        var response = await client.PostAsync("/sms/2/text/advanced", content);
+
+                                        var responseContent = await response.Content.ReadAsStringAsync();
+
                                         return Json(new { success = true, message = "Successfully Time In" });
 
                                     }
@@ -137,7 +207,7 @@ namespace Attendance_System.Controllers
 
                         cmd.ExecuteNonQuery();
 
-                        return Json(new { success = true});
+                        return Json(new { success = true });
                     }
 
                 }
@@ -150,40 +220,119 @@ namespace Attendance_System.Controllers
         }
 
         [HttpPost]
-        public ActionResult Absent(string course_id)
+        public async Task<ActionResult> Absent(string course_id)
         {
             try
             {
-
                 using (var db = new SqlConnection(connStr))
                 {
-                    db.Open();
+                    await db.OpenAsync(); // Use asynchronous open for better scalability
 
-                    string query = @"UPDATE attendance 
-                                    SET attendance_status = 'ABSENT'
-                                    WHERE 
-                                        course_id = @course_id
-                                        AND attendance_time_in is null
-                                        AND attendance_date = CAST(GETDATE() AS DATE)";
+                    string updateQuery = @"
+                                        UPDATE attendance 
+                                        SET attendance_status = 'ABSENT'
+                                        WHERE 
+                                            course_id = @course_id
+                                            AND attendance_time_in IS NULL
+                                            AND attendance_date = CAST(GETDATE() AS DATE)";
 
-                    using (var cmd = new SqlCommand(query, db))
+                    using (var updateCmd = new SqlCommand(updateQuery, db))
                     {
-                        cmd.Parameters.AddWithValue("@course_id", course_id);
-
-                        cmd.ExecuteNonQuery();
-
-                        Session["attendance"] = null;
-                        Session["course_id"] = null;
-                        return Json(new { success = true });
+                        updateCmd.Parameters.AddWithValue("@course_id", course_id);
+                        await updateCmd.ExecuteNonQueryAsync();
                     }
 
+                    // Clear session variables if necessary
+                    Session["attendance"] = null;
+                    Session["course_id"] = null;
+
+                    string selectQuery = @"
+                                    SELECT 
+                                        s.student_id,
+                                        s.student_firstname,
+                                        s.student_lastname,
+                                        g.guardian_name,
+                                        g.guardian_contact,
+                                        c.course_title,
+                                        c.course_section
+                                    FROM 
+                                        student s
+                                    INNER JOIN 
+                                        attendance a ON s.student_id = a.student_id 
+                                    AND a.course_id = @course_id 
+                                    AND a.attendance_date = CAST(GETDATE() AS DATE) 
+                                    AND a.attendance_status = 'ABSENT'
+                                    INNER JOIN 
+                                        guardian g ON s.guardian_id = g.guardian_id
+                                    INNER JOIN 
+                                        course c ON a.course_id = c.course_id";
+
+                    using (var selectCmd = new SqlCommand(selectQuery, db))
+                    {
+                        selectCmd.Parameters.AddWithValue("@course_id", course_id);
+
+                        using (var reader = await selectCmd.ExecuteReaderAsync())
+                        {
+                            while (await reader.ReadAsync())
+                            {
+                                var guardian_name = reader["guardian_name"].ToString();
+                                var student_name = reader["student_firstname"].ToString() + " " + reader["student_lastname"].ToString();
+                                var title = reader["course_title"].ToString();
+                                var section = reader["course_section"].ToString();
+                                var contact = reader["guardian_contact"].ToString();
+
+                                // Adjust contact number format
+                                contact = contact.StartsWith("0") ? contact.Substring(1) : contact;
+                                long number = long.Parse("63" + contact);
+
+                                string message = $"Dear {guardian_name},\n\nWe regret to inform you that {student_name} was marked absent for the class {title} {section} on {DateTime.Now:MMMM dd, yyyy}. Please provide any supporting documents if he/she has a valid reason for the absence.\n\nThank you,\nProf. Rey Caliao";
+
+                                using (var client = new HttpClient())
+                                {
+                                    client.BaseAddress = new Uri("https://5y9mzy.api.infobip.com");
+                                    client.DefaultRequestHeaders.Add("Authorization", "App d8abe1ab1300d60a2cd89527ec7a1572-18705815-11c2-4bfd-ae31-9152d3cd83e9");
+                                    client.DefaultRequestHeaders.Add("Accept", "application/json");
+
+                                    var body = new
+                                    {
+                                        messages = new[]
+                                                {
+                                            new
+                                            {
+                                                destinations = new[]
+                                                {
+                                                    new { to = number.ToString() }
+                                                },
+                                                from = "CCICT",
+                                                text = message
+                                            }
+                                        }
+                                    };
+
+                                    var json = Newtonsoft.Json.JsonConvert.SerializeObject(body);
+                                    var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+                                    var response = await client.PostAsync("/sms/2/text/advanced", content);
+                                    var responseContent = await response.Content.ReadAsStringAsync();
+
+                                    if (!response.IsSuccessStatusCode)
+                                    {
+                                        return Json(new { success = false, message = "Failed to send SMS: " + responseContent });
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    return Json(new { success = true });
                 }
             }
             catch (Exception ex)
             {
                 return Json(new { success = false, message = "Error: " + ex.Message });
-
             }
         }
+
+
     }
 }

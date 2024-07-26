@@ -77,6 +77,17 @@
         if (id == "") {
             return
         }
+
+        const loadingPopup = Swal.fire({
+            title: 'Processing...',
+            text: 'Please wait while we process your request.',
+            allowOutsideClick: false,
+            showConfirmButton: false,
+            didOpen: () => {
+                Swal.showLoading();
+            }
+        });
+
         var formData = new FormData();
         formData.append('student_id', id);
         formData.append('course_id', params.get('course_id'))
@@ -88,6 +99,7 @@
             contentType: false,
             processData: false,
             success: function (response) {
+                loadingPopup.close()
                 if (response.success) {
                     if (response.success) {
                         Swal.fire({
@@ -114,6 +126,7 @@
                 }
             },
             error: function (xhr, status, error) {
+                loadingPopup.close()
                 Swal.fire({
                     icon: 'error',
                     title: 'Error',

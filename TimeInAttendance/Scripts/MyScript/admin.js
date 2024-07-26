@@ -126,10 +126,22 @@
     $(".denyButton").click(function (event) {
         event.preventDefault();
 
+        const loadingPopup = Swal.fire({
+            title: 'Processing...',
+            text: 'Please wait while we process your request.',
+            allowOutsideClick: false,
+            showConfirmButton: false,
+            didOpen: () => {
+                Swal.showLoading();
+            }
+        });
+
         var formData = new FormData();
         formData.append('student_id', $(this).data('student'))
         formData.append('course_code', $(this).data('code'))
         formData.append('course_section', $(this).data('section'))
+        formData.append('contact', $(this).data('contact'))
+        formData.append('student_name', $(this).data('name'))
 
         $.ajax({
             url: '../Home/Unenroll',
@@ -138,6 +150,7 @@
             contentType: false,
             processData: false,
             success: function (response) {
+                loadingPopup.close();
                 if (response.success) {
                     Swal.fire({
                         icon: 'success',
@@ -157,6 +170,7 @@
                 }
             },
             error: function (xhr, status, error) {
+                loadingPopup.close();
                 Swal.fire({
                     icon: 'error',
                     title: 'Error',
@@ -169,11 +183,22 @@
     $(".approveButton").click(function (event) {
         event.preventDefault();
 
+        const loadingPopup = Swal.fire({
+            title: 'Processing...',
+            text: 'Please wait while we process your request.',
+            allowOutsideClick: false,
+            showConfirmButton: false,
+            didOpen: () => {
+                Swal.showLoading();
+            }
+        });
+
         var formData = new FormData();
         formData.append('student_id', $(this).data('student'))
         formData.append('course_code', $(this).data('code'))
         formData.append('course_section', $(this).data('section'))
         formData.append('contact', $(this).data('contact'))
+        formData.append('student_name', $(this).data('name'))
 
         console.log($(this).data('contact'))
 
@@ -184,6 +209,7 @@
             contentType: false,
             processData: false,
             success: function (response) {
+                loadingPopup.close();
                 if (response.success) {
                     Swal.fire({
                         icon: 'success',
@@ -203,6 +229,7 @@
                 }
             },
             error: function (xhr, status, error) {
+                loadingPopup.close();
                 Swal.fire({
                     icon: 'error',
                     title: 'Error',
@@ -333,6 +360,11 @@
         $('#body-content').hide()
     })
 
+    $('#back-profile').click(function () {
+        $('#profile-content').show()
+        $('#profile-body-content').hide()
+    })
+
     function formatDate(date) {
         let month = ('0' + (date.getMonth() + 1)).slice(-2);
         let day = ('0' + date.getDate()).slice(-2);
@@ -454,8 +486,8 @@
         date.setMinutes(minutes);
         date.setSeconds(0);
 
-        // Subtract the specified number of hours
-        date.setHours(date.getHours() - 2);
+        // Subtract the specified number of minutes
+        date.setMinutes(date.getMinutes() - 15);
 
         // Format the result back to HH:MM
         const newHours = String(date.getHours()).padStart(2, '0');
@@ -463,4 +495,104 @@
 
         return `${newHours}:${newMinutes}`;
     }
+
+    $('.card-profile').click(function () {
+        $('#profile-selected-course').text($(this).data('code'))
+        $('#profile-selected-section').text($(this).data('section'))
+        $('#profile-selected-sched').text(`(${$(this).data('sched') }, ${$(this).data('time') })`)
+        $('#profile-content').hide()
+        $('#profile-body-content').show()
+
+        
+        var formData = new FormData();
+        formData.append('course_id', $(this).data('id'))
+
+        $.ajax({
+            url: '../Home/Profiles',
+            type: 'POST',
+            data: formData,
+            contentType: false,
+            processData: false,
+            success: function (response) {
+                console.log(response)
+                $('#profileTable tbody').empty();
+                response.forEach(function (item) {
+                    var row = `
+                    <tr style="font-size: 10px; font-weight: normal; text-align: center;"">
+                        <td>${item.Status}</td>
+                        <td>${item.ID}</td>
+                        <td>${item.Student_Fullname}</td>
+                        <td>${item.Student_Contact}</td>
+                        <td>${item.Guardian_Fullname}</td>
+                        <td>${item.Guardian_Contact}</td>
+                        <td>${item.Relationship_to_Guardian}</td>
+                        <td>${item.Total_Late}</td>
+                        <td>${item.Total_Absent}</td>
+                    </tr>
+                `;
+                    $('#profileTable tbody').append(row);
+                });
+
+                sortTableBySelectedOption();
+
+            },
+            error: function (xhr, status, error) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: 'An error occurred. Please try again later.'
+                });
+            }
+        });
+    })
+
+    function sortTableBySelectedOption() {
+        const selectedOption = $('#sortOptions').val();
+        const $tbody = $('#profileTable tbody');
+        const $rows = $tbody.find('tr').get();
+
+        switch (selectedOption) {
+            case 'Name':
+                sortByName($rows);
+                break;
+            case 'Late':
+                sortByLate($rows);
+                break;
+            case 'Absent':
+                sortByAbsent($rows);
+                break;
+            default:
+                break;
+        }
+
+        $tbody.append($rows);
+    }
+
+    function sortByName(rows) {
+        rows.sort((a, b) => {
+            const nameA = $(a).find('td:eq(2)').text().trim().toLowerCase();
+            const nameB = $(b).find('td:eq(2)').text().trim().toLowerCase();
+            return nameA.localeCompare(nameB);
+        });
+    }
+
+    function sortByLate(rows) {
+        rows.sort((a, b) => {
+            const lateA = parseInt($(a).find('td:eq(7)').text().trim(), 10) || 0;
+            const lateB = parseInt($(b).find('td:eq(7)').text().trim(), 10) || 0;
+            return lateB - lateA; // Sort by descending order
+        });
+    }
+
+    function sortByAbsent(rows) {
+        rows.sort((a, b) => {
+            const absentA = parseInt($(a).find('td:eq(8)').text().trim(), 10) || 0;
+            const absentB = parseInt($(b).find('td:eq(8)').text().trim(), 10) || 0;
+            return absentB - absentA; // Sort by descending order
+        });
+    }
+
+    $('#sortOptions').on('change', function () {
+        sortTableBySelectedOption();
+    });
 });
