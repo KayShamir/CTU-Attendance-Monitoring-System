@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
+using System.IO;
 using System.Linq;
 using System.Web;
 using System.Web.Mvc;
@@ -113,6 +114,61 @@ namespace Attendance_System.Controllers
                 return Json(new { success = false, message = "Error: " + ex.Message });
             }
 
+        }
+
+        [HttpPost]
+        public ActionResult AddDocument(HttpPostedFileBase file, int attendanceId)
+        {
+            if (file != null && file.ContentLength > 0)
+            {
+                var fileName = Path.GetFileName(file.FileName);
+                var path = Path.Combine(Server.MapPath("~/App_Data/uploads"), fileName);
+                file.SaveAs(path);
+
+                try
+                {
+                    using (var db = new SqlConnection(connStr))
+                    {
+                        db.Open();
+
+                        string query = @"
+                            UPDATE attendance
+                            SET attendance_supporting_docs = @file
+                            WHERE attendance_id = @attendance_id
+                                ";
+
+                        using (var cmd = new SqlCommand(query, db))
+                        {
+                            cmd.Parameters.AddWithValue("@file", fileName);
+                            cmd.Parameters.AddWithValue("@attendance_id", attendanceId);
+
+                            cmd.ExecuteNonQuery();
+                        }
+                    }
+                    return Json(new { success = true, message = "File uploaded successfully." });
+
+                }
+                catch (Exception ex)
+                {
+                    return Json(new { success = false, message = "Error: " + ex.Message });
+                }
+
+            }
+
+            return Json(new { success = false, message = "No file was uploaded." });
+        }
+
+        public ActionResult GetDocument(string fileName)
+        {
+            var filePath = Path.Combine(Server.MapPath("~/App_Data/uploads"), fileName);
+            if (!System.IO.File.Exists(filePath))
+            {
+                return HttpNotFound("File not found");
+            }
+
+            var fileBytes = System.IO.File.ReadAllBytes(filePath);
+            var contentType = MimeMapping.GetMimeMapping(filePath);
+            return File(fileBytes, contentType, fileName);
         }
     }
 }

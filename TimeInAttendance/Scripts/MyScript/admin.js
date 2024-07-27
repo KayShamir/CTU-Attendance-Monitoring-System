@@ -426,7 +426,7 @@
                 let middleNameInitial = item["student_midname"] ? item["student_midname"].charAt(0).toUpperCase() + '.' : '-';
                 let attendanceTimeIn = item["time_in"] ? item["time_in"].split('.')[0] : '-';
                 let attendanceStatus = item["remarks"] ? item["remarks"] : '-';
-                let supportingDocs = item["docs"] ? item["docs"] : '-';
+                let supportingDocs = item["docs"] ? `<a href="../student/GetDocument?fileName=${encodeURIComponent(item["docs"])}" target="_blank">View Document</a>` : '-';
 
                 var row = `
                 <tr style="font-size: 12px; font-weight: normal; text-align: center;">

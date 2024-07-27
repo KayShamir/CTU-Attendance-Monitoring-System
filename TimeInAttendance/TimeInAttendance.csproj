@@ -190,6 +190,7 @@
     <Content Include="Content\Images\Calendar.svg" />
     <Content Include="Content\Images\courses.svg" />
     <Content Include="Content\Images\Dashboard.svg" />
+    <Content Include="Content\Images\Doorbell.png" />
     <Content Include="Content\Images\Eye.svg" />
     <Content Include="Content\Images\Group 153.png" />
     <Content Include="Content\Images\Group 170.png" />
@@ -248,6 +249,7 @@
     <Content Include="Views\student\Dashboard.cshtml" />
   </ItemGroup>
   <ItemGroup>
+    <Folder Include="App_Data\uploads\" />
     <Folder Include="Models\" />
   </ItemGroup>
   <ItemGroup>

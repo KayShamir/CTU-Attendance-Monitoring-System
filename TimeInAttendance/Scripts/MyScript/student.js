@@ -102,4 +102,54 @@
             }
         });
     })
+
+
+    $('.addFile').on('click', function () {
+        var attendanceId = $(this).data('attendance');
+
+        $('#fileInput').click();
+
+        $('#fileInput').on('change', function () {
+            var file = this.files[0];
+
+            if (file) {
+                var formData = new FormData();
+                formData.append('file', file);
+                formData.append('attendanceId', attendanceId);
+
+                $.ajax({
+                    url: '/student/AddDocument',
+                    type: 'POST',
+                    data: formData,
+                    contentType: false,
+                    processData: false,
+                    success: function (response) {
+                        if (response.success) {
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Success',
+                                text: response.message
+                            }).then(function () {
+                                location.reload()
+                            });
+                        } else {
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Error',
+                                text: response.message
+                            });                        }
+                    },
+                    error: function (xhr, status, error) {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error',
+                            text: 'An error occurred. Please try again later.'
+                        });
+                    }
+                });
+            }
+            $(this).val('');
+        })
+    });
+
 })

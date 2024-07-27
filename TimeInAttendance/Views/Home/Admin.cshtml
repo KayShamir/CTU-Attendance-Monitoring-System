@@ -102,7 +102,7 @@
                 <img src="@Url.Content("~/Content/Images/Users.svg")" alt="Profiles Icon" class="button-icon"> Profiles
             </button>
             <button type="button" class="btn btn-settings" onclick="openTab(event, 'Notif')">
-                <img src="@Url.Content("~/Content/Images/Settings.svg")" alt="Settings Icon" class="button-icon"> Notification
+                <img src="@Url.Content("~/Content/Images/Doorbell.png")" alt="Settings Icon" class="button-icon"> Notification
             </button>
             <button type="button" class="btn btn-about" onclick="openTab(event, 'About')">
                 <img src="@Url.Content("~/Content/Images/Info.svg")" alt="About Icon" class="button-icon"> About
@@ -192,7 +192,7 @@
             </div>
 
             <!--Courses Main Container-->
-            <div id="Courses" class="tabcontent">
+            <div id="Courses" class="tabcontent  py-5">
                 <div class="create-course">
                     <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createCourseModal">
                         Create Course
@@ -242,7 +242,7 @@
             </div>
 
             <!--Profiles Main Container-->
-            <div id="Profiles" class="tabcontent">
+            <div id="Profiles" class="tabcontent  py-5">
                 <div id="profile-content" class="row pt-5">
 
                     @if (courses.Any())

@@ -33,7 +33,6 @@ namespace Attendance_System.Controllers
         {
             try
             {
-
                 using (var db = new SqlConnection(connStr))
                 {
                     db.Open();

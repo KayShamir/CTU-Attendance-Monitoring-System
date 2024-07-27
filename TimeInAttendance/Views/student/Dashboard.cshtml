@@ -122,6 +122,50 @@
     }
 }
 
+@{ 
+    List<dynamic> notifications = new List<dynamic>();
+
+    using (var db = new SqlConnection(connStr))
+    {
+        db.Open();
+
+        string query = @"
+        SELECT
+            c.course_title,
+            c.course_section,
+            a.attendance_id
+        FROM
+            attendance a
+        INNER JOIN
+            course c ON c.course_id = a.course_id AND a.student_id = 1334318 
+        WHERE a.attendance_status = 'ABSENT' AND a.attendance_date = CAST(GETDATE() AS DATE) AND a.attendance_supporting_docs is null
+        ";
+
+        using (var cmd = new SqlCommand(query, db))
+        {
+            cmd.Parameters.AddWithValue("@stud_id", Session["id"]);
+
+            using (var reader = cmd.ExecuteReader())
+            {
+                if (reader.HasRows)
+                {
+                    while (reader.Read())
+                    {
+                        notifications.Add(new
+                        {
+                            title = reader["course_title"].ToString(),
+                            section = reader["course_section"].ToString(),
+                            id = reader["attendance_id"].ToString()
+                        });
+                    }
+                }
+            }
+        }
+
+
+    }
+}
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -138,6 +182,7 @@
 </head>
 <body>
     <div class="datetime" id="datetime"></div>
+    <div id="fullname">@Session["firstname"] @Session["lastname"]</div>
     <div class="main-container">
         <div class="dashboard-container">
             <div class="head-container">
@@ -149,6 +194,9 @@
             </button>
             <button type="button" class="btn btn-Open" onclick="openTab(event, 'Open')">
                 <img src="@Url.Content("~/Content/Images/Open Book.png")" alt="Courses Icon" class="button-icon"> Open Courses
+            </button>
+            <button type="button" class="btn btn-settings" onclick="openTab(event, 'Notif')">
+                <img src="@Url.Content("~/Content/Images/Doorbell.png")" alt="Settings Icon" class="button-icon"> Notification
             </button>
             <div class="logout-container">
                 <button type="button" class="btn btn-Logout" id="logoutButton">
@@ -171,7 +219,7 @@
                                 <div class="card" style="height: 25rem; width: 20rem; cursor: pointer;" onclick="showCourseDetails('@HttpUtility.UrlEncode(course.Code)', '@HttpUtility.UrlEncode(course.Block)', '@HttpUtility.UrlEncode(course.Status)')">
                                     <div style="height: 15rem; overflow: hidden;">
                                         <img src="../Home/Image?filename=@HttpUtility.UrlEncode(course.Image)" class="card-img-top w-100 h-100" style="object-fit: cover;" alt="Course Image">
-                                    </div>                                       
+                                    </div>
                                     <div class="card-body">
                                         <h6 class="card-title text-truncate fs-10">@course.Title</h6>
                                         <h6 class="card-subtitle mb-2 text-truncate fs-16 text-muted">@course.Code</h6>
@@ -207,7 +255,7 @@
                                 <div class="card" style="height: 25rem; width: 20rem; cursor: pointer;" onclick="showCourseDetails('@HttpUtility.UrlEncode(course.Code)', '@HttpUtility.UrlEncode(course.Block)', '@HttpUtility.UrlEncode(course.Status)')">
                                     <div style="height: 15rem; overflow: hidden;">
                                         <img src="../Home/Image?filename=@HttpUtility.UrlEncode(course.Image)" class="card-img-top w-100 h-100" style="object-fit: cover;" alt="Course Image">
-                                    </div>   
+                                    </div>
                                     <div class="card-body">
                                         <h6 class="card-title text-truncate fs-10">@course.Title</h6>
                                         <h6 class="card-subtitle mb-2 text-truncate fs-16 text-muted">@course.Code</h6>
@@ -229,7 +277,32 @@
                     }
                 </div>
             </div>
+            <div id="Notif" class="tabcontent py-5">
+                @if (notifications.Any())
+                {
+                    for (var i = 0; i < notifications.Count; i++)
+                    {
+                        var notification = notifications[i];
+
+                        <div class="notification">
+                            <img src="@Url.Content("~/Content/Images/Add.png")" alt="Icon">
+                            <div class="notification-text">
+                                <p>You were marked as absent in the class @notification.title @notification.section. Please provide supporting document.</p>
+                            </div>
+                            <div class="notification-buttons">
+                                <button type="button" class="btn btn-success addFile" data-attendance="@notification.id">Add Document</button>
+                            </div>
+                        </div>
+                    }
+                }
+                else
+                {
+                    <p>No Application yet.</p>
+                }
+            </div>
         </div>
+
+        <input type="file" id="fileInput" style="display: none;">
 
         <div class="modal fade" id="courseModal" tabindex="-1" aria-labelledby="courseModalLabel" aria-hidden="true">
             <div class="modal-dialog">
@@ -288,6 +361,10 @@
                     document.getElementById("enrollButton").style.display = "none";
                     document.getElementById("unenrollButton").style.display = "block";
                 }
+                else if (status == 'ENROLLED') {
+                    document.getElementById("enrollButton").style.display = "none";
+                    document.getElementById("unenrollButton").style.display = "none";
+                }
                 else {
                     document.getElementById("enrollButton").style.display = "block";
                     document.getElementById("unenrollButton").style.display = "none";
@@ -313,6 +390,35 @@
         margin: 0;
         overflow: hidden;
         position: relative;
+    }
+
+    .notification {
+        background-color: white;
+        padding: 15px;
+        border-radius: 5px;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        margin-bottom: 15px;
+        display: flex;
+        align-items: center;
+    }
+
+        .notification img {
+            width: 40px;
+            height: 40px;
+            margin-right: 15px;
+        }
+
+    .notification-text {
+        flex-grow: 1;
+        display: flex;
+        align-items: center;
+        text-align: center;
+    }
+
+    .notification-buttons {
+        display: flex;
+        gap: 10px;
+        align-items: center;
     }
 
     .logout-container {
@@ -524,6 +630,23 @@
         border-radius: 10px;
         z-index: 4;
         font-weight: 300;
+    }
+
+    #fullname {
+        position: fixed;
+        top: 0; /* Adjusted for a bit more margin from the top */
+        right: 20px; /* Adjusted for responsiveness */
+        font-size: 16px;
+        font-weight: bold;
+        color: #072c12;
+        padding: 5px 10px;
+        border-radius: 10px;
+        z-index: 4;
+        font-weight: 300;
+        background-color: #fff; /* Added background color for better visibility */
+        white-space: nowrap; /* Prevents text from wrapping */
+        overflow: hidden; /* Ensures text does not overflow the element */
+        text-overflow: ellipsis; /* Adds ellipsis if text overflows */
     }
 
     .dashboard-container .button-icon {
