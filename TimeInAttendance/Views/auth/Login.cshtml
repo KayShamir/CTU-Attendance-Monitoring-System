@@ -33,12 +33,16 @@
                         <!-- Identification Number -->
                         <div class="mb-3">
                             <label for="identificationNumber" class="form-label text-white">Identification Number</label>
-                            <input type="text" class="form-control identificationNumber" name="stud_id" placeholder="Enter your ID">
+                            <input type="text" class="form-control identificationNumber" id="stud_id" name="stud_id" placeholder="Enter your ID">
                         </div>
                         <!-- Password -->
-                        <div class="mb-5">
+                        <div class="mb-5 position-relative" >
                             <label for="password" class="form-label text-white">Password</label>
                             <input type="password" class="form-control" name="stud_password" id="password" placeholder="Enter your password">
+                            <div class="d-flex justify-content-between">
+                                <div></div>
+                                <a href="#" id="forgotpass" class="text-white position-absolute" style="right: 0; top: 35px;">Forgot Password?</a>
+                            </div>                        
                         </div>
                         <!-- Login Button and Create Account Link -->
                         <div class="d-flex align-items-center">

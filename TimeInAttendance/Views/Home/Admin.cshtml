@@ -219,10 +219,10 @@
                                         <div class="buttons mt-3">
                                             <div class="row">
                                                 <div class="col-6 text-start">
-                                                    <button type="button" id="edit_@i" name="edit" class="btn btn-outline-success form-control" data-bs-dismiss="modal" data-course-code="@course.Code" data-bs-toggle="modal" data-bs-target="#updateCourseModal">Edit</button>
+                                                    <button type="button" id="edit_@i" name="edit" class="btn btn-outline-success form-control" data-bs-dismiss="modal" data-course-id="@course.Id" data-bs-toggle="modal" data-bs-target="#updateCourseModal">Edit</button>
                                                 </div>
                                                 <div class="col-6 text-end">
-                                                    <button type="button" id="delete_@i" name="delete" class="btn btn-danger form-control" data-course-code="@course.Id">Delete</button>
+                                                    <button type="button" id="delete_@i" name="delete" class="btn btn-danger form-control" data-course-id="@course.Id">Delete</button>
                                                 </div>
                                             </div>
                                         </div>
@@ -662,7 +662,7 @@
 
 <!-- Your form goes here -->
 <!-- Create Course Modal -->
-<form id="Create-course" method="post" action="../Home/Admin" enctype="multipart/form-data">
+<form id="Create-course" enctype="multipart/form-data">
     <div class="modal fade" id="createCourseModal" tabindex="-1" aria-labelledby="registrationModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-lg">
             <div class="modal-content modal-transparent">
@@ -673,10 +673,10 @@
                             <div class="col-md-6">
                                 <div class="row">
                                     <div class="col-md-12">
-                                        <input type="text" id="code" name="code" class="form-control mb-3" placeholder="Code">
+                                        <input type="text" id="code" name="code" class="form-control mb-3" placeholder="Code" required>
                                     </div>
                                     <div class="col-md-12">
-                                        <select id="courseType" name="courseType" class="form-control mb-3">
+                                        <select id="courseType" name="courseType" class="form-control mb-3" required>
                                             <option value="" disabled selected>Select Course Type</option>
                                             <option value="lecture">Lecture</option>
                                             <option value="laboratory">Laboratory</option>
@@ -687,17 +687,17 @@
                                         <input type="file" class="form-control" name="img" accept="image/jpg,image/bmp,image/png,image/gif" required />
                                     </div>
                                     <div class="col-md-12">
-                                        <textarea id="description" name="description" class="form-control mb-3" placeholder="Description" rows="6"></textarea>
+                                        <textarea id="description" name="description" class="form-control mb-3" placeholder="Description" rows="6" required></textarea>
                                     </div>
                                 </div>
                             </div>
                             <div class="col-md-6">
                                 <div class="row">
                                     <div class="col-md-12">
-                                        <input type="text" id="title" name="title" class="form-control mb-3" placeholder="Title">
+                                        <input type="text" id="title" name="title" class="form-control mb-3" placeholder="Title" required>
                                     </div>
                                     <div class="col-md-12">
-                                        <input type="number" id="units" name="units" class="form-control mb-3" placeholder="Units" min="0">
+                                        <input type="number" id="units" name="units" class="form-control mb-3" placeholder="Units" min="0" required>
                                     </div>
                                     <div class="col-md-12">
                                         <div class="form-control mb-3">
@@ -751,7 +751,7 @@
                                         </div>
                                     </div>
                                     <div class="col-md-12" style="margin-bottom: 20px">
-                                        <input type="text" class="form-control" name="block" placeholder="Block Section" />
+                                        <input type="text" class="form-control" name="block" placeholder="Block Section" required/>
                                     </div>
                                 </div>
                             </div>
@@ -763,7 +763,7 @@
                                 <button type="button" class="btn form-control" data-bs-dismiss="modal" style="border-color: #05692D" onclick="resetForm()">Cancel</button>
                             </div>
                             <div class="col-md-6 mb-3 text-end">
-                                <button type="submit" id="register" name="register" class="btn1 form-control" style="background-color: #05692D; color: white" onclick="submitForm()">Register</button>
+                                <button type="button" id="register" name="register" class="btn1 form-control" style="background-color: #05692D; color: white">Register</button>
                             </div>
                         </div>
                     </div>
@@ -785,7 +785,7 @@
                             <div class="col-md-6">
                                 <div class="row">
                                     <div class="col-md-12">
-                                        <input type="text" id="update_code" name="update_code" class="form-control mb-3" placeholder="Code" disabled>
+                                        <input type="text" id="update_code" name="update_code" class="form-control mb-3" placeholder="Code">
                                     </div>
                                     <div class="col-md-12">
                                         <select id="update_courseType" name="update_courseType" class="form-control mb-3">

@@ -4,40 +4,8 @@
     var schedDate;
     var schedStartTime;
     var schedEndTime;
+    var updateID;
     history.pushState(null, null, location.href);
-
-
-
-    $(document).ready(function () {
-        $("[id^=edit_]").click(function (event) {
-            event.preventDefault();
-            var code = $(this).data("course-code");
-            $.post("../Home/CourseSearch", {
-                code: code
-            }, function (data) {
-                if (data[0].mess == 0) {
-                    $("#update_title").val(data[0].title);
-                    $("#update_code").val(data[0].code);
-                    $("#update_courseType").val(data[0].course_type);
-                    $("#update_units").val(data[0].units);
-                    $("#update_time").val(data[0].time);
-                    $("#update_block").val(data[0].block);
-                    $("#update_description").val(data[0].description);
-
-                    // Clear existing schedule checkboxes
-                    $("input[name='schedule']").prop('checked', false);
-
-                    // Set schedule checkboxes based on the data
-                    var schedule = data[0].schedule.split(','); // Assuming schedule is a comma-separated string
-                    schedule.forEach(function (day) {
-                        $("input[name='schedule'][value='" + day.trim().toLowerCase() + "']").prop('checked', true);
-                    });
-                } else {
-                    alert("No Subject Found!");
-                }
-            });
-        });
-    });
 
     $('#logoutButton').click(function () {
         Swal.fire({
@@ -55,69 +23,292 @@
         });
     })
 
-    $("#update").click(function (event) {
-        event.preventDefault();
+    $('#register').on('click', function (e) {
+        e.preventDefault(); 
 
-        var title = $("#update_title").val();
-        var code = $("#update_code").val();
-        var courseType = $("#update_courseType").val();
-        var units = $("#update_units").val();
-        var time = $("#update_time").val();
-        var block = $("#update_block").val();
-        var description = $("#update_description").val();
+        var isValid = true;
+        var errorMessage = '';
 
-        // Collect the schedule values
-        var schedule = [];
-        $("input[name='schedule']:checked").each(function () {
-            schedule.push($(this).val());
+        var formData = new FormData();
+        var code = $('#code').val();
+        var title = $('#title').val();
+        var description = $('#description').val();
+        var courseType = $('#courseType').val();
+        var units = $('#units').val();
+        var block = $('input[name="block"]').val();
+
+        if (!code || !title || !description || !courseType || !units || !block) {
+            isValid = false;
+            errorMessage = 'Please fill out all required fields.';
+        }
+
+        formData.append('code', code);
+        formData.append('title', title);
+        formData.append('description', description);
+        formData.append('courseType', courseType);
+        formData.append('units', units);
+        formData.append('block', block);
+
+        var scheduleDays = [];
+        $('input[name="schedule"]:checked').each(function () {
+            scheduleDays.push($(this).val());
         });
 
-        $.post("../Home/CourseUpdate", {
-            title: title,
-            code: code,
-            courseType: courseType,
-            units: units,
-            time: time,
-            block: block,
-            description: description,
-            schedule: schedule.join(',') // Join array to a comma-separated string
+        if (scheduleDays.length === 0) {
+            isValid = false;
+            errorMessage = 'Please select at least one day.';
+        }
+
+        formData.append('scheduleDays', scheduleDays.join(', '));
+
+        var timePairs = [];
+
+        $('.time-row:visible').each(function () {
+            var startTime = $(this).find('input[type="time"]').first().val();
+            var endTime = $(this).find('input[type="time"]').last().val();
+
+            if (startTime && endTime) {
+                if (new Date('1970-01-01T' + endTime) < new Date('1970-01-01T' + startTime)) {
+                    isValid = false;
+                    errorMessage = 'End time cannot be before start time.';
+                    return false; 
+                }
+                timePairs.push(startTime + ' - ' + endTime);
+            } else {
+                if (scheduleDays.length > 0) {
+                    isValid = false;
+                    errorMessage = 'Please provide start and end times for each selected day.';
+                    return false; 
+                }
+            }
+        });
+
+        if (!isValid) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: errorMessage
+            });
+            return;
+        }
+
+        formData.append('timePairs', timePairs.join(', '));
+
+        var fileInput = $('input[name="img"]')[0];
+        if (fileInput.files.length > 0) {
+            formData.append('img', fileInput.files[0]);
+        }
+
+        $.ajax({
+            url: '../Home/createCourse', 
+            type: 'POST',
+            data: formData,
+            processData: false,
+            contentType: false,
+            success: function (response) {
+                if (response.success) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Success',
+                        text: 'Course successfully created.'
+                    }).then(function () {
+                        location.reload(); 
+                    });
+                } else {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: response.message
+                    });
+                }
+            },
+            error: function () {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: 'An unexpected error occurred. Please try again later.'
+                });
+            }
+        });
+    });
+
+    $('input[name="schedule"]').on('change', function () {
+        var day = $(this).val();
+        var isChecked = $(this).is(':checked');
+        $('#time-' + day).toggle(isChecked);
+    });
+
+    $("[id^=edit_]").click(function (event) {
+        event.preventDefault();
+        var id = $(this).data("course-id");
+        updateID = id
+
+        $.post("../Home/CourseSearch", {
+            id: id
         }, function (data) {
             if (data[0].mess == 0) {
-                alert("The data was successfully updated");
-                location.reload();
+                $("#update_title").val(data[0].title);
+                $("#update_code").val(data[0].code);
+                $("#update_courseType").val(data[0].course_type);
+                $("#update_units").val(data[0].units);
+                $("#update_time").val(data[0].time);
+                $("#update_block").val(data[0].block);
+                $("#update_description").val(data[0].description);
+
+                $("input[name='schedule']").prop('checked', false);
+
+                var schedule = data[0].schedule.split(',');
+                schedule.forEach(function (day) {
+                    $("input[name='schedule'][value='" + day.trim().toLowerCase() + "']").prop('checked', true);
+                });
+            } else {
+                alert("No Subject Found!");
+            }
+        });
+    });
+
+    $('#update').on('click', function (e) {
+        e.preventDefault();
+
+        var isValid = true;
+        var errorMessage = '';
+
+        var formData = new FormData();
+        var code = $('#update_code').val();
+        var title = $('#update_title').val();
+        var description = $('#update_description').val();
+        var courseType = $('#update_courseType').val();
+        var units = $('#update_units').val();
+        var block = $('#update_block').val();
+
+        if (!code || !title || !description || !courseType || !units || !block) {
+            isValid = false;
+            errorMessage = 'Please fill out all required fields.';
+        }
+
+        formData.append('id', updateID);
+        formData.append('code', code);
+        formData.append('title', title);
+        formData.append('description', description);
+        formData.append('courseType', courseType);
+        formData.append('units', units);
+        formData.append('block', block);
+
+        var scheduleDays = [];
+        $('input[name="schedule"]:checked').each(function () {
+            scheduleDays.push($(this).val());
+        });
+
+        if (scheduleDays.length === 0) {
+            isValid = false;
+            errorMessage = 'Please select at least one day.';
+        }
+
+        formData.append('scheduleDays', scheduleDays.join(', '));
+
+        var timePairs = [];
+
+        $('.time-inputs:visible').each(function () {
+            var startTime = $(this).find('input[type="time"]').first().val();
+            var endTime = $(this).find('input[type="time"]').last().val();
+
+            if (startTime && endTime) {
+                if (new Date('1970-01-01T' + endTime) < new Date('1970-01-01T' + startTime)) {
+                    isValid = false;
+                    errorMessage = 'End time cannot be before start time.';
+                    return false;
+                }
+                timePairs.push(startTime + ' - ' + endTime);
+            } else {
+                if (scheduleDays.length > 0) {
+                    isValid = false;
+                    errorMessage = 'Please provide start and end times for each selected day.';
+                    return false;
+                }
+            }
+        });
+
+        if (!isValid) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: errorMessage
+            });
+            return;
+        }
+
+        formData.append('timePairs', timePairs.join(', '));
+
+        $.ajax({
+            url: '../Home/updateCourse',
+            type: 'POST',
+            data: formData,
+            processData: false,
+            contentType: false,
+            success: function (response) {
+                if (response.success) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Success',
+                        text: 'Course successfully updated.'
+                    }).then(function () {
+                        location.reload();
+                    });
+                } else {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: response.message
+                    });
+                }
+            },
+            error: function () {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: 'An unexpected error occurred. Please try again later.'
+                });
             }
         });
     });
 
 
-
     $("[id^=delete_]").click(function (event) {
         event.preventDefault();
-        var code = $(this).data("course-code");
 
-        $.post("../Home/deleteCourse", {
-            code: code
+        var formData = new FormData()
+        formData.append('id', $(this).data("course-id")) 
 
-        }, function (data) {
-            
-            if (data[0].mess == 0) {
-                Swal.fire({
-                    icon: 'success',
-                    title: 'Success',
-                    text: 'Course was successfully deleted'
-                }).then(function () {
-                    location.reload()
-                });
-
-            }
-            else {
+        $.ajax({
+            url: '../Home/deleteCourse',
+            type: 'POST',
+            data: formData,
+            processData: false,
+            contentType: false,
+            success: function (response) {
+                if (response.success) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Success',
+                        text: 'Course successfully deleted.'
+                    }).then(function () {
+                        location.reload();
+                    });
+                } else {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: "Unable to delete course"
+                    });
+                }
+            },
+            error: function () {
                 Swal.fire({
                     icon: 'error',
                     title: 'Error',
-                    text: 'Unable to delete course.'
+                    text: 'An unexpected error occurred. Please try again later.'
                 });
             }
-           
         });
     });
 

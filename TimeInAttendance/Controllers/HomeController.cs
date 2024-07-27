@@ -58,116 +58,68 @@ namespace Attendance.Controllers
             return View();
         }
 
+
         [HttpPost]
-        public ActionResult Admin(FormCollection collection, HttpPostedFileBase img)
+        public ActionResult createCourse()
         {
-            // Check if image is uploaded
-            if (img == null || img.ContentLength <= 0)
+            try
             {
-                Response.Write("<script>alert('Please upload an image.')</script>");
-                return View();
-            }
 
-            string imag = Path.GetFileName(img.FileName);
-            string logpath = "c:\\attendance"; 
-            string filepath = Path.Combine(logpath, imag);
-            img.SaveAs(filepath);
-
-            var code = collection["code"];
-            var title = collection["title"];
-            var description = collection["description"];
-            var course_type = collection["courseType"];
-            var units = collection["units"];
-            var scheduleDays = collection.GetValues("schedule");
-            var block = collection["block"];
-
-            var startTimes = new List<string>();
-            var endTimes = new List<string>();
-
-            // Check if any required field is missing
-            if (string.IsNullOrEmpty(code) ||
-                string.IsNullOrEmpty(title) ||
-                string.IsNullOrEmpty(description) ||
-                string.IsNullOrEmpty(course_type) ||
-                string.IsNullOrEmpty(units) ||
-                scheduleDays == null ||
-                scheduleDays.Length == 0 ||
-                string.IsNullOrEmpty(block))
-            {
-                Response.Write("<script>alert('Please input all required data.')</script>");
-                return View();
-            }
-
-            // Process schedule and times
-            foreach (var day in scheduleDays)
-            {
-                var startTime = collection[$"time-{day}-start"];
-                var endTime = collection[$"time-{day}-end"];
-
-                if (string.IsNullOrEmpty(startTime) || string.IsNullOrEmpty(endTime))
+                var img = Request.Files["img"];
+                if (img != null && img.ContentLength > 0)
                 {
-                    Response.Write($"<script>alert('Please input both start and end times for {day}.')</script>");
-                    return View();
+                    string imag = Path.GetFileName(img.FileName);
+                    string logpath = "c:\\attendance";
+                    string filepath = Path.Combine(logpath, imag);
+                    img.SaveAs(filepath);
                 }
 
-                startTimes.Add(startTime);
-                endTimes.Add(endTime);
-            }
 
-            var timePairs = startTimes.Zip(endTimes, (start, end) => $"{start} - {end}");
+                var code = Request.Form["code"];
+                var title = Request.Form["title"];
+                var description = Request.Form["description"];
+                var course_type = Request.Form["courseType"];
+                var units = Request.Form["units"];
+                var scheduleDays = Request.Form["scheduleDays"].Split(new[] { ", " }, StringSplitOptions.None);
+                var block = Request.Form["block"];
+                var timePairs = Request.Form["timePairs"];
 
-            // Save course data to database
-            using (var db = new SqlConnection(connStr))
-            {
-                db.Open();
-                using (var cmd = db.CreateCommand())
+                using (var db = new SqlConnection(connStr))
                 {
-                    cmd.CommandType = CommandType.Text;
-                    cmd.CommandText = "INSERT INTO COURSE (COURSE_CODE, COURSE_TITLE, COURSE_DESCRIPTION, COURSE_TYPE, COURSE_UNITS, COURSE_SCHED, COURSE_TIME, COURSE_SECTION, COURSE_IMAGE_URL) " +
-                                      "VALUES (@code, @title, @description, @course_type, @units, @schedule, @time, @block, @file)";
-                    cmd.Parameters.AddWithValue("@code", code);
-                    cmd.Parameters.AddWithValue("@title", title);
-                    cmd.Parameters.AddWithValue("@description", description);
-                    cmd.Parameters.AddWithValue("@course_type", course_type);
-                    cmd.Parameters.AddWithValue("@units", units);
-                    cmd.Parameters.AddWithValue("@schedule", string.Join(", ", scheduleDays));
-                    cmd.Parameters.AddWithValue("@time", string.Join(", ", timePairs));
-                    cmd.Parameters.AddWithValue("@block", block);
-                    cmd.Parameters.AddWithValue("@file", imag);
+                    db.Open();
+                    using (var cmd = db.CreateCommand())
+                    {
+                        cmd.CommandType = CommandType.Text;
+                        cmd.CommandText = "INSERT INTO COURSE (COURSE_CODE, COURSE_TITLE, COURSE_DESCRIPTION, COURSE_TYPE, COURSE_UNITS, COURSE_SCHED, COURSE_TIME, COURSE_SECTION, COURSE_IMAGE_URL) " +
+                                          "VALUES (@code, @title, @description, @course_type, @units, @schedule, @time, @block, @file)";
+                        cmd.Parameters.AddWithValue("@code", code);
+                        cmd.Parameters.AddWithValue("@title", title);
+                        cmd.Parameters.AddWithValue("@description", description);
+                        cmd.Parameters.AddWithValue("@course_type", course_type);
+                        cmd.Parameters.AddWithValue("@units", units);
+                        cmd.Parameters.AddWithValue("@schedule", string.Join(", ", scheduleDays));
+                        cmd.Parameters.AddWithValue("@time", timePairs);
+                        cmd.Parameters.AddWithValue("@block", block);
+                        cmd.Parameters.AddWithValue("@file", Path.GetFileName(img.FileName));
 
-                    int rowsAffected = cmd.ExecuteNonQuery();
-                    if (rowsAffected > 0)
-                    {
-                        TempData["SuccessMessage"] = "Successfully Created.";
-                        return RedirectToAction("Admin"); // Redirect to avoid form resubmission
-                    }
-                    else
-                    {
-                        // Insert failed
-                        Response.Write("<script>alert('Failed to create the course. Please try again.')</script>");
-                        return View();
+                        int rowsAffected = cmd.ExecuteNonQuery();
+                        if (rowsAffected > 0)
+                        {
+                            return Json(new { success = true });
+                        }
+                        else
+                        {
+                            return Json(new { success = false, message = "Failed to create the course." });
+                        }
                     }
                 }
             }
-        }
-
-
-
-        private bool CheckIfCodeExists(string code)
-        {
-            using (var db = new SqlConnection(connStr))
+            catch (Exception ex)
             {
-                db.Open();
-                using (var cmd = db.CreateCommand())
-                {
-                    cmd.CommandType = CommandType.Text;
-                    cmd.CommandText = "SELECT COUNT(*) FROM COURSE WHERE COURSE_CODE = @code"; // Correct table and column name
-                    cmd.Parameters.AddWithValue("@code", code);
-                    int count = (int)cmd.ExecuteScalar();
-                    return count > 0;
-                }
+                return Json(new { success = false, message = $"An error occurred: {ex.Message}" });
             }
         }
+
 
         [HttpGet]
         public FileResult Image(string filename)
@@ -182,63 +134,10 @@ namespace Attendance.Controllers
             return new FilePathResult(filepath, mime);
         }
 
-
-        // UPDATE
-        public ActionResult CourseUpdate()
-        {
-            var data = new List<object>();
-            var code = Request["code"];
-            var title = Request["title"];
-            var course_type = Request["courseType"];
-            var units = Request["units"];
-            var time = Request["time"];
-            var block_section = Request["block"];
-            var description = Request["description"];
-            var schedule = Request["schedule"] ?? ""; // Default to an empty string if schedule is null
-
-            using (var db = new SqlConnection(connStr))
-            {
-                db.Open();
-                using (var cmd = db.CreateCommand())
-                {
-                    cmd.CommandType = CommandType.Text;
-                    cmd.CommandText = "UPDATE COURSE SET" +
-                                      " COURSE_TITLE = @title, " +
-                                      " COURSE_TYPE = @course_type, " +
-                                      " COURSE_UNITS = @units, " +
-                                      " COURSE_TIME = @time, " +
-                                      " COURSE__SECTION = @block_section, " +
-                                      " COURSE_DESCRIPTION = @description, " +
-                                      " COURSE_SCHED = @schedule" +
-                                      " WHERE COURSE_CODE ='" + code + "'";
-                    cmd.Parameters.AddWithValue("@title", title);
-                    cmd.Parameters.AddWithValue("@course_type", course_type);
-                    cmd.Parameters.AddWithValue("@units", units);
-                    cmd.Parameters.AddWithValue("@time", time);
-                    cmd.Parameters.AddWithValue("@block_section", block_section);
-                    cmd.Parameters.AddWithValue("@description", description);
-                    cmd.Parameters.AddWithValue("@schedule", schedule);
-
-                    var ctr = cmd.ExecuteNonQuery();
-                    if (ctr > 0)
-                    {
-                        data.Add(new
-                        {
-                            mess = 0
-                        });
-                    }
-                }
-            }
-            return Json(data, JsonRequestBehavior.AllowGet);
-        }
-
-
-
-
         public ActionResult CourseSearch()
         {
             var data = new List<object>();
-            var code = Request["code"];
+            var id = Request["id"];
 
             using (var db = new SqlConnection(connStr))
             {
@@ -247,7 +146,7 @@ namespace Attendance.Controllers
                 {
                     cmd.CommandType = CommandType.Text;
                     cmd.CommandText = $"SELECT * FROM COURSE"
-                                    + " WHERE COURSE_CODE='" + code + "'";
+                                    + " WHERE COURSE_ID='" + id + "'";
                     SqlDataReader reader = cmd.ExecuteReader();
                     if (reader.Read())
                     {
@@ -276,11 +175,18 @@ namespace Attendance.Controllers
             return Json(data, JsonRequestBehavior.AllowGet);
         }
 
-        // DELETE
-        public ActionResult deleteCourse()
+        [HttpPost]
+        public ActionResult updateCourse()
         {
-            var data = new List<object>();
-            var code = Request["code"];
+            var code = Request.Form["code"];
+            var title = Request.Form["title"];
+            var courseType = Request.Form["courseType"];
+            var units = Request.Form["units"];
+            var block = Request.Form["block"];
+            var description = Request.Form["description"];
+            var scheduleDays = Request.Form["scheduleDays"];
+            var timePairs = Request.Form["timePairs"];
+            var id = Request.Form["id"];
 
             try
             {
@@ -290,15 +196,57 @@ namespace Attendance.Controllers
                     using (var cmd = db.CreateCommand())
                     {
                         cmd.CommandType = CommandType.Text;
-                        cmd.CommandText = $"DELETE FROM COURSE WHERE COURSE_ID='" + code + "'";
+                        cmd.CommandText = "UPDATE COURSE SET " +
+                                          "COURSE_TITLE = @title, " +
+                                          "COURSE_TYPE = @courseType, " +
+                                          "COURSE_UNITS = @units, " +
+                                          "COURSE_SECTION = @block, " +
+                                          "COURSE_DESCRIPTION = @description, " +
+                                          "COURSE_SCHED = @scheduleDays, " +
+                                          "COURSE_TIME = @timePairs " +
+                                          "WHERE COURSE_ID = @id";
+
+                        cmd.Parameters.AddWithValue("@title", title);
+                        cmd.Parameters.AddWithValue("@courseType", courseType);
+                        cmd.Parameters.AddWithValue("@units", units);
+                        cmd.Parameters.AddWithValue("@block", block);
+                        cmd.Parameters.AddWithValue("@description", description);
+                        cmd.Parameters.AddWithValue("@scheduleDays", scheduleDays);
+                        cmd.Parameters.AddWithValue("@timePairs", timePairs);
+                        cmd.Parameters.AddWithValue("@code", code);
+                        cmd.Parameters.AddWithValue("@id", id);
+
                         var ctr = cmd.ExecuteNonQuery();
-                        if (ctr > 0)
-                        {
-                            data.Add(new
-                            {
-                                mess = 0
-                            });
-                        }
+
+
+                        return Json(new { success = true, message = "Course successfully updated" });
+
+                    }
+                }
+            }
+            catch(Exception ex)
+            {
+                return Json(new { success = false, message = "Error: " + ex.Message });
+            }
+
+        }
+
+        [HttpPost]
+        public ActionResult deleteCourse(string id)
+        {
+
+            try
+            {
+                using (var db = new SqlConnection(connStr))
+                {
+                    db.Open();
+                    using (var cmd = db.CreateCommand())
+                    {
+                        cmd.CommandType = CommandType.Text;
+                        cmd.CommandText = $"DELETE FROM COURSE WHERE COURSE_ID=@course_id";
+                        cmd.Parameters.AddWithValue("@course_id", id);
+                        var ctr = cmd.ExecuteNonQuery();
+                        return Json(new { success = true, message = "Course successfully deleted" });
 
                     }
 
@@ -306,12 +254,9 @@ namespace Attendance.Controllers
             }
             catch (Exception ex)
             {
-                data.Add(new
-                {
-                    mess = 1
-                });
+                return Json(new { success = false, message = "Error: " + ex.Message });
+
             }
-            return Json(data, JsonRequestBehavior.AllowGet);
 
         }
 

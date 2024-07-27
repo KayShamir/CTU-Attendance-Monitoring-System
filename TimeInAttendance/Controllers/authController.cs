@@ -6,6 +6,9 @@ using System.IO;
 using System.Linq;
 using System.Web;
 using System.Web.Mvc;
+using System.Net.Http;
+using System.Text;
+using System.Threading.Tasks;
 
 namespace Attendance_System.Controllers
 {
@@ -170,6 +173,74 @@ namespace Attendance_System.Controllers
                     }
                     return Json(new { success = false, message = "Id or Password is not correct" });
                 }
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = "Error: " + ex.Message });
+            }
+        }
+
+        [HttpPost]
+        public async Task<ActionResult> forgotpass(FormCollection collection)
+        {
+            var stud_id = collection["stud_id"];
+
+            try
+            {
+                using (var db = new SqlConnection(connStr))
+                {
+                    db.Open();
+                    string query = "SELECT STUDENT_CONTACT_NO, STUDENT_PASSWORD" +
+                        " FROM STUDENT" +
+                        " WHERE STUDENT_ID = @stud_id";
+
+                    using (var cmd = new SqlCommand(query, db))
+                    {
+                        cmd.Parameters.AddWithValue("@stud_id", stud_id);
+
+                        using (var reader = cmd.ExecuteReader())
+                        {
+                            if (reader.Read())
+                            {
+                                var contact = reader["student_contact_no"].ToString();
+                                var password = reader["student_password"].ToString();
+
+                                contact = contact.StartsWith("0") ? contact.Substring(1) : contact;
+
+                                var message = password;
+
+                                long number = long.Parse("63" + contact);
+
+                                var client = new HttpClient();
+                                client.BaseAddress = new Uri("https://5y9mzy.api.infobip.com");
+
+                                client.DefaultRequestHeaders.Add("Authorization", "App d8abe1ab1300d60a2cd89527ec7a1572-18705815-11c2-4bfd-ae31-9152d3cd83e9");
+                                client.DefaultRequestHeaders.Add("Accept", "application/json");
+
+                                var body = $@"{{
+                                                ""messages"": [
+                                                    {{
+                                                        ""destinations"": [
+                                                            {{
+                                                                ""to"": ""{number}""
+                                                            }}
+                                                        ],
+                                                        ""from"": ""CCICT"",
+                                                        ""text"": ""{message.Replace("\"", "\\\"").Replace("\n", "\\n")}""
+                                                    }}
+                                                ]
+                                            }}";
+                                var content = new StringContent(body, Encoding.UTF8, "application/json");
+
+                                var response = await client.PostAsync("/sms/2/text/advanced", content);
+
+                                var responseContent = await response.Content.ReadAsStringAsync();
+                            }
+
+                        }
+                    }
+                }
+                return Json(new { success = true, message = "Password sent to your number" });
             }
             catch (Exception ex)
             {

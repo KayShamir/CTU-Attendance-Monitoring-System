@@ -110,7 +110,7 @@ namespace Attendance_System.Controllers
 
                                         var attendanceStatus = updateCmd.ExecuteScalar()?.ToString();
 
-                                        /*
+
                                         var client = new HttpClient();
                                         client.BaseAddress = new Uri("https://5y9mzy.api.infobip.com");
 
@@ -148,13 +148,13 @@ namespace Attendance_System.Controllers
                                                                 ""text"": ""{message.Replace("\"", "\\\"").Replace("\n", "\\n")}""
                                                             }}
                                                         ]
-                                                    }}"; 
+                                                    }}";
                                         var content = new StringContent(body, Encoding.UTF8, "application/json");
 
                                         var response = await client.PostAsync("/sms/2/text/advanced", content);
 
                                         var responseContent = await response.Content.ReadAsStringAsync();
-                                        */
+
 
                                         return Json(new { success = true, message = "Successfully Time In", student_id = student_id, student_name = student_name, student_image = student_image });
 
@@ -285,7 +285,7 @@ namespace Attendance_System.Controllers
                                 var contact = reader["guardian_contact"].ToString();
 
                                 // Adjust contact number format
-                                /*
+
                                 contact = contact.StartsWith("0") ? contact.Substring(1) : contact;
                                 long number = long.Parse("63" + contact);
 
@@ -324,7 +324,7 @@ namespace Attendance_System.Controllers
                                         return Json(new { success = false, message = "Failed to send SMS: " + responseContent });
                                     }
                                 }
-                                */
+
                             }
                         }
                     }
