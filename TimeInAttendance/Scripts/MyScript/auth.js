@@ -57,6 +57,8 @@
         validateIntegerInput(this);
     })
 
+
+    //REGISTER
     document.getElementById('imageUpload').addEventListener('change', function (event) {
         var reader = new FileReader();
         reader.onload = function () {
@@ -103,6 +105,7 @@
         });
     });
 
+    //LOGIN
     $("#verifyForm").submit(function (event) {
         event.preventDefault();
         var formData = new FormData(this);

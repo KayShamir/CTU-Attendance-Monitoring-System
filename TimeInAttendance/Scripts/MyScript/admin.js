@@ -430,6 +430,62 @@
         });
     });
 
+    $('.notifyButton').click(function () {
+        var formData = new FormData()
+        formData.append('drop_id', $(this).data('drop'))
+        formData.append('student_name', $(this).data('name'))
+        formData.append('course_title', $(this).data('title'))
+        formData.append('course_section', $(this).data('section'))
+        formData.append('contact', $(this).data('contact'))
+        formData.append('guardian_name', $(this).data('guardian'))
+
+        const loadingPopup = Swal.fire({
+            title: 'Processing...',
+            text: 'Please wait while we process your request.',
+            allowOutsideClick: false,
+            showConfirmButton: false,
+            didOpen: () => {
+                Swal.showLoading();
+            }
+        });
+
+        $.ajax({
+            url: '../Home/Notify',
+            type: 'POST',
+            data: formData,
+            contentType: false,
+            processData: false,
+            success: function (response) {
+                loadingPopup.close();
+                if (response.success) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Success',
+                        text: response.message
+                    }).then(function () {
+                        location.reload()
+
+                    });
+
+                } else {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: response.message
+                    });
+                }
+            },
+            error: function (xhr, status, error) {
+                loadingPopup.close();
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: 'An error occurred. Please try again later.'
+                });
+            }
+        });
+    })
+
     $('.card-dashboard').click(function () {
         $('#selected-date').off()
         $('#note').off()

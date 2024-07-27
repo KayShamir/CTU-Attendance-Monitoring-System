@@ -39,11 +39,38 @@
 }
 
 @{
-    List<dynamic> notifications = new List<dynamic>();
+    List<dynamic> notifications_drop = new List<dynamic>();
+    List<dynamic> notifications_app = new List<dynamic>();
 
     using (var db = new SqlConnection(connStr))
     {
         db.Open();
+
+        using (var cmd = db.CreateCommand())
+        {
+            cmd.CommandType = CommandType.Text;
+            cmd.CommandText = "SELECT * FROM DROP_STUDENT";
+            using (var reader = cmd.ExecuteReader())
+            {
+                if (reader.HasRows)
+                {
+                    while (reader.Read())
+                    {
+                        notifications_drop.Add(new
+                        {
+                            Id = reader["DROP_ID"].ToString(),
+                            Fullname = reader["STUDENT_FIRSTNAME"].ToString() + " " + reader["STUDENT_LASTNAME"].ToString(),
+                            Section = reader["COURSE_SECTION"].ToString(),
+                            Title = reader["COURSE_TITLE"].ToString(),
+                            Contact = reader["GUARDIAN_CONTACT"].ToString(),
+                            guardianName = reader["GUARDIAN_NAME"].ToString(),
+                        });
+                    }
+                    reader.Close();
+                }
+            }
+        }
+
         using (var cmd = db.CreateCommand())
         {
             cmd.CommandType = CommandType.Text;
@@ -54,7 +81,7 @@
                 {
                     while (reader.Read())
                     {
-                        notifications.Add(new
+                        notifications_app.Add(new
                         {
                             Id = reader["STUDENT_ID"].ToString(),
                             Fullname = reader["STUDENT_FIRSTNAME"].ToString() + " " + reader["STUDENT_LASTNAME"].ToString(),
@@ -63,6 +90,7 @@
                             Contact = reader["STUDENT_CONTACT_NO"].ToString(),
                         });
                     }
+                    reader.Close();
                 }
             }
         }
@@ -320,11 +348,28 @@
 
             <!--Notif Main Container-->
             <div id="Notif" class="tabcontent py-5">
-                @if (notifications.Any())
+                @if (notifications_drop.Any())
                 {
-                    for (var i = 0; i < notifications.Count; i++)
+                    for (var i = 0; i < notifications_drop.Count; i++)
                     {
-                        var notification = notifications[i];
+                        var notification = notifications_drop[i];
+
+                        <div class="notification">
+                            <img src="@Url.Content("~/Content/Images/Doorbell.png")" alt="Icon">
+                            <div class="notification-text">
+                                <p>@notification.Fullname is about to drop out from the class @notification.Title @notification.Section</p>
+                            </div>
+                            <div class="notification-buttons">
+                                <button type="button" class="btn btn-success notifyButton" data-drop="@notification.Id" data-name="@notification.Fullname" data-title="@notification.Title" data-section="@notification.Section" data-contact="@notification.Contact" data-guardian="@notification.guardianName">Notify</button>
+                            </div>
+                        </div>
+                    }
+                }
+                @if (notifications_app.Any())
+                {
+                    for (var i = 0; i < notifications_app.Count; i++)
+                    {
+                        var notification = notifications_app[i];
 
                         <div class="notification">
                             <img src="@Url.Content("~/Content/Images/Add.png")" alt="Icon">
@@ -338,10 +383,7 @@
                         </div>
                     }
                 }
-                else
-                {
-                    <p>No Application yet.</p>
-                }
+              
             </div>
 
             <!--About Main Container-->

@@ -297,9 +297,9 @@ namespace Attendance.Controllers
                 long number = long.Parse("63" + contact);
 
                 var client = new HttpClient();
-                client.BaseAddress = new Uri("https://5y9mzy.api.infobip.com");
+                client.BaseAddress = new Uri("https://e1pd3n.api.infobip.com");
 
-                client.DefaultRequestHeaders.Add("Authorization", "App d8abe1ab1300d60a2cd89527ec7a1572-18705815-11c2-4bfd-ae31-9152d3cd83e9");
+                client.DefaultRequestHeaders.Add("Authorization", "App 76cbc8aba3b943d5a2dae8264a17011c-2e3203d1-648f-4448-ba4e-eb95936702df");
                 client.DefaultRequestHeaders.Add("Accept", "application/json");
 
                 var body = $@"{{
@@ -368,9 +368,9 @@ namespace Attendance.Controllers
                 string message = $"Dear {student_name},\n\nCongratulations! You have been approved for the course {course_code} {course_section}. We look forward to your active participation.\n\nBest regards,\nProf. Rey Caliao";
 
                 var client = new HttpClient();
-                client.BaseAddress = new Uri("https://5y9mzy.api.infobip.com");
+                client.BaseAddress = new Uri("https://e1pd3n.api.infobip.com");
 
-                client.DefaultRequestHeaders.Add("Authorization", "App d8abe1ab1300d60a2cd89527ec7a1572-18705815-11c2-4bfd-ae31-9152d3cd83e9");
+                client.DefaultRequestHeaders.Add("Authorization", "App 76cbc8aba3b943d5a2dae8264a17011c-2e3203d1-648f-4448-ba4e-eb95936702df");
                 client.DefaultRequestHeaders.Add("Accept", "application/json");
 
                 var body = $@"{{
@@ -393,6 +393,69 @@ namespace Attendance.Controllers
                 var responseContent = await response.Content.ReadAsStringAsync();
 
                 return Json(new { success = true, message = "Student Application Approved " });
+
+
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = "Error: " + ex.Message });
+            }
+
+        }
+
+        [HttpPost]
+        public async Task<ActionResult> Notify(string drop_id, string student_name, string course_title, string course_section, string contact, string guardian_name)
+        {
+            try
+            {
+                contact = contact.StartsWith("0") ? contact.Substring(1) : contact;
+
+                using (var db = new SqlConnection(connStr))
+                {
+                    db.Open();
+
+                    string query = @"
+                            UPDATE dbo.[drop]
+                            SET DROP_STATUS = 'To be enrolled - Notified'
+                            WHERE DROP_ID = @drop_id";
+
+                    using (var cmd = new SqlCommand(query, db))
+                    {
+                        cmd.Parameters.AddWithValue("@drop_id", drop_id);
+
+                        cmd.ExecuteNonQuery();
+                    }
+                }
+
+                long number = long.Parse("63" + contact);
+                string message = $"Dear {guardian_name},\n\nWe regret to inform you that {student_name} is about to be dropped from his/her class {course_title} {course_section} due to excessive lateness and absences. Professor Rey Caliao would like to schedule a meeting to discuss {student_name}'s situation and explore possible solutions.\n\nPlease contact us at your earliest convenience to arrange a meeting.\n\nThank you,\nProf. Rey Caliao";
+
+                var client = new HttpClient();
+                client.BaseAddress = new Uri("https://e1pd3n.api.infobip.com");
+
+                client.DefaultRequestHeaders.Add("Authorization", "App 76cbc8aba3b943d5a2dae8264a17011c-2e3203d1-648f-4448-ba4e-eb95936702df");
+                client.DefaultRequestHeaders.Add("Accept", "application/json");
+
+                var body = $@"{{
+                                ""messages"": [
+                                    {{
+                                        ""destinations"": [
+                                            {{
+                                                ""to"": ""{number}""
+                                            }}
+                                        ],
+                                        ""from"": ""CCICT"",
+                                        ""text"": ""{message.Replace("\"", "\\\"").Replace("\n", "\\n")}""
+                                    }}
+                                ]
+                            }}";
+                var content = new StringContent(body, Encoding.UTF8, "application/json");
+
+                var response = await client.PostAsync("/sms/2/text/advanced", content);
+
+                var responseContent = await response.Content.ReadAsStringAsync();
+
+                return Json(new { success = true, message = "Student's guardian notified successfully " });
 
 
             }
@@ -640,9 +703,9 @@ namespace Attendance.Controllers
                 long number = long.Parse("63" + contact);
 
                 var client = new HttpClient();
-                client.BaseAddress = new Uri("https://5y9mzy.api.infobip.com");
+                client.BaseAddress = new Uri("https://e1pd3n.api.infobip.com");
 
-                client.DefaultRequestHeaders.Add("Authorization", "App d8abe1ab1300d60a2cd89527ec7a1572-18705815-11c2-4bfd-ae31-9152d3cd83e9");
+                client.DefaultRequestHeaders.Add("Authorization", "App 76cbc8aba3b943d5a2dae8264a17011c-2e3203d1-648f-4448-ba4e-eb95936702df");
                 client.DefaultRequestHeaders.Add("Accept", "application/json");
 
                 var body = $@"{{
