@@ -101,22 +101,19 @@
             success: function (response) {
                 loadingPopup.close()
                 if (response.success) {
-                    if (response.success) {
-                        Swal.fire({
-                            icon: 'success',
-                            title: 'Success',
-                            text: response.message
-                        }).then(function () {
-                           location.reload()
-                        });
-
-                    } else {
-                        Swal.fire({
-                            icon: 'error',
-                            title: 'Error',
-                            text: response.message
-                        });
-                    }
+                    Swal.fire({
+                        title: 'Success',
+                        html: `
+                                <div style="text-align: center;">
+                                    <img src="../Home/Image?filename=${encodeURIComponent(response.student_image)}" alt="Student Picture" style="width: 100px; height: 100px; border-radius: 50%; margin-bottom: 10px;">
+                                    <div style="font-size: 18px; font-weight: bold;">${response.student_id}</div>
+                                    <div style="font-size: 16px;">${response.student_name}</div>
+                                    <div>${response.message}</div>
+                                </div>
+                            `
+                    }).then(function () {
+                        location.reload();
+                    });
                 } else {
                     Swal.fire({
                         icon: 'error',

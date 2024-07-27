@@ -54,7 +54,10 @@
                             Title = reader["COURSE_TITLE"].ToString(),
                             Schedule = reader["COURSE_SCHED"].ToString(),
                             Time = reader["COURSE_TIME"].ToString(),
-                            Status = reader["STUCOURSE_STATUS"].ToString()
+                            Status = reader["STUCOURSE_STATUS"].ToString(),
+                            Desc = reader["COURSE_DESCRIPTION"].ToString(),
+                            Units = reader["COURSE_UNITS"].ToString()
+
                         });
                     }
                 }
@@ -111,7 +114,9 @@
                             Title = reader["COURSE_TITLE"].ToString(),
                             Schedule = reader["COURSE_SCHED"].ToString(),
                             Time = reader["COURSE_TIME"].ToString(),
-                            Status = reader["STUCOURSE_STATUS"].ToString()
+                            Status = reader["STUCOURSE_STATUS"].ToString(),
+                            Desc = reader["COURSE_DESCRIPTION"].ToString(),
+                            Units = reader["COURSE_UNITS"].ToString()
                         });
                     }
                 }
@@ -130,15 +135,15 @@
         db.Open();
 
         string query = @"
-        SELECT
-            c.course_title,
-            c.course_section,
-            a.attendance_id
-        FROM
-            attendance a
-        INNER JOIN
-            course c ON c.course_id = a.course_id AND a.student_id = 1334318 
-        WHERE a.attendance_status = 'ABSENT' AND a.attendance_date = CAST(GETDATE() AS DATE) AND a.attendance_supporting_docs is null
+                SELECT
+                    c.course_title,
+                    c.course_section,
+                    a.attendance_id
+                FROM
+                    attendance a
+                INNER JOIN
+                    course c ON c.course_id = a.course_id AND a.student_id = @stud_id 
+                WHERE a.attendance_status = 'ABSENT' AND a.attendance_date = CAST(GETDATE() AS DATE) AND a.attendance_supporting_docs is null
         ";
 
         using (var cmd = new SqlCommand(query, db))
@@ -216,7 +221,7 @@
                             var course = enrollCourses[i];
 
                             <div class="col-md-4 mb-4">
-                                <div class="card" style="height: 25rem; width: 20rem; cursor: pointer;" onclick="showCourseDetails('@HttpUtility.UrlEncode(course.Code)', '@HttpUtility.UrlEncode(course.Block)', '@HttpUtility.UrlEncode(course.Status)')">
+                                <div class="card" style="height: 25rem; width: 20rem; cursor: pointer;" onclick="showCourseDetails('@course.Code', '@course.Title', '@course.Block', '@course.Units', '@course.Desc', '@course.Schedule', '@course.Time', '@course.Status')">
                                     <div style="height: 15rem; overflow: hidden;">
                                         <img src="../Home/Image?filename=@HttpUtility.UrlEncode(course.Image)" class="card-img-top w-100 h-100" style="object-fit: cover;" alt="Course Image">
                                     </div>
@@ -252,7 +257,7 @@
                             var course = openCourses[i];
 
                             <div class="col-md-4 mb-4">
-                                <div class="card" style="height: 25rem; width: 20rem; cursor: pointer;" onclick="showCourseDetails('@HttpUtility.UrlEncode(course.Code)', '@HttpUtility.UrlEncode(course.Block)', '@HttpUtility.UrlEncode(course.Status)')">
+                                <div class="card" style="height: 25rem; width: 20rem; cursor: pointer;" onclick="showCourseDetails('@course.Code', '@course.Title', '@course.Block', '@course.Units', '@course.Desc', '@course.Schedule', '@course.Time', '@course.Status')">
                                     <div style="height: 15rem; overflow: hidden;">
                                         <img src="../Home/Image?filename=@HttpUtility.UrlEncode(course.Image)" class="card-img-top w-100 h-100" style="object-fit: cover;" alt="Course Image">
                                     </div>
@@ -297,7 +302,9 @@
                 }
                 else
                 {
-                    <p>No Application yet.</p>
+                    <div class="col-12">
+                        <p class="text-center">No Notifications yet.</p>
+                    </div>
                 }
             </div>
         </div>
@@ -312,8 +319,23 @@
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
                     <div class="modal-body">
-                        <p><strong>Course Code:</strong> <span id="modalCourseCode"></span></p>
-                        <p><strong>Section:</strong> <span id="modalSection"></span></p>
+                        <div class="row">
+                            <!-- First column -->
+                            <div class="col-md-6">
+                                <p><strong>Code:</strong> <span id="modalCourseCode"></span></p>
+                                <p><strong>Title:</strong> <span id="modalCourseTitle"></span></p>
+                                <p><strong>Section:</strong> <span id="modalSection"></span></p>
+                                <p><strong>Units:</strong> <span id="modalUnits"></span></p>
+                            </div>
+                            <!-- Second column -->
+                            <div class="col-md-6">
+                                <p><strong>Description:</strong> <span id="modalDesc"></span></p>
+                                <p><strong>Schedules:</strong></p>
+                                <ul id="modalSchedulesList">
+                                    <!-- List items will be added here dynamically -->
+                                </ul>
+                            </div>
+                        </div>
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
@@ -352,9 +374,24 @@
             setInterval(updateDateTime, 1000);
             updateDateTime();
 
-            function showCourseDetails(courseCode, section, status) {
+            function showCourseDetails(courseCode, title, section, unit, desc, sched, time, status) {
                 document.getElementById('modalCourseCode').textContent = courseCode;
+                document.getElementById('modalCourseTitle').textContent = title;
                 document.getElementById('modalSection').textContent = section;
+                document.getElementById('modalUnits').textContent = unit; 
+                document.getElementById('modalDesc').textContent = desc;
+
+                var scheduleList = document.getElementById('modalSchedulesList');
+                scheduleList.innerHTML = '';
+                sched = sched.split(', ')
+                time = time.split(', ')
+                if (sched && sched.length > 0) {
+                    sched.forEach(function (schedule, index) {
+                        var li = document.createElement('li');
+                        li.textContent = schedule.trim() + " (" + time[index] + ")" ;
+                        scheduleList.appendChild(li);
+                    });
+                }
 
                 if (status == 'PENDING') {
                     console.log(status)
@@ -564,7 +601,7 @@
             color: #072C12;
         }
 
-        .dashboard-container .btn-profiles {
+        .dashboard-container .btn-Enrolled {
             font-size: 13px;
         }
 
@@ -572,7 +609,7 @@
             font-size: 13px;
         }
 
-        .dashboard-container .btn-about {
+        .dashboard-container .btn-Open {
             font-size: 13px;
         }
 

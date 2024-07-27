@@ -42,6 +42,7 @@ namespace Attendance_System.Controllers
                                 s.student_id,
                                 s.student_firstname,
                                 s.student_lastname,
+                                s.student_photo_url,
                                 g.guardian_name,
                                 g.guardian_contact,
                                 c.course_title,
@@ -72,7 +73,8 @@ namespace Attendance_System.Controllers
                             {
                                 int status = (int)reader["status"];
                                 var guardian_name = reader["guardian_name"].ToString();
-                                var student_name = reader["student_firstname"].ToString() + " " + reader["student_lastname"].ToString(); ;
+                                var student_name = reader["student_firstname"].ToString() + " " + reader["student_lastname"].ToString();
+                                var student_image = reader["student_photo_url"].ToString();
                                 var title = reader["course_title"].ToString();
                                 var section = reader["course_section"].ToString();
                                 var contact = reader["guardian_contact"].ToString();
@@ -108,6 +110,7 @@ namespace Attendance_System.Controllers
 
                                         var attendanceStatus = updateCmd.ExecuteScalar()?.ToString();
 
+                                        /*
                                         var client = new HttpClient();
                                         client.BaseAddress = new Uri("https://5y9mzy.api.infobip.com");
 
@@ -151,8 +154,9 @@ namespace Attendance_System.Controllers
                                         var response = await client.PostAsync("/sms/2/text/advanced", content);
 
                                         var responseContent = await response.Content.ReadAsStringAsync();
+                                        */
 
-                                        return Json(new { success = true, message = "Successfully Time In" });
+                                        return Json(new { success = true, message = "Successfully Time In", student_id = student_id, student_name = student_name, student_image = student_image });
 
                                     }
 
@@ -281,6 +285,7 @@ namespace Attendance_System.Controllers
                                 var contact = reader["guardian_contact"].ToString();
 
                                 // Adjust contact number format
+                                /*
                                 contact = contact.StartsWith("0") ? contact.Substring(1) : contact;
                                 long number = long.Parse("63" + contact);
 
@@ -319,6 +324,7 @@ namespace Attendance_System.Controllers
                                         return Json(new { success = false, message = "Failed to send SMS: " + responseContent });
                                     }
                                 }
+                                */
                             }
                         }
                     }

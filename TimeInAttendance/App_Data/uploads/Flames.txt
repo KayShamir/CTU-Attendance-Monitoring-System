@@ -1,0 +1,122 @@
+HTML ---------
+
+<h2>Flames</h2>
+Person 1 <br /><input type="text" class="form-control" id="p1"/>
+Person 2 <br /><input type="text" class="form-control" id="p2"/> <br />
+<button class="btn btn-primary" id="subBut">Submit</button><br /><br />
+<p id="total_letter">Total Letter: </p>
+<p id="p_flames" style="font-weight: 700"></p>
+
+JS------------
+
+
+$().ready(function () {
+    $('#subBut').click(function () {
+        $.post('../Home/postFlames', {
+            p1: $('#p1').val(),
+            p2: $('#p2').val(),
+      
+        }, function (data) {
+            $('#total_letter').text('Total Letter: ' + data[0].count_letter)
+            $('#p_flames').text(data[0].result_word)
+
+        })
+    })
+})
+
+C#-----------
+
+        public ActionResult postFlames()
+        {
+            var data = new List<object>();
+            var p1 = Request["p1"];
+            var p2 = Request["p2"];
+            string word = "FLAMES";
+            int count_letter = 0;
+            string alphabet = "abcdefghijklmnopqrstuvwxyz";
+            alphabet = alphabet.ToLower();
+
+
+            foreach (char i in alphabet)
+            {
+                int p1_count = 0;
+                int p2_count = 0;
+
+                foreach (char p1_letter in p1)
+                {
+                    if (i == p1_letter)
+                    {
+                        p1_count++;
+                    }
+                }
+
+                foreach (char p2_letter in p2)
+                {
+                    if (i == p2_letter)
+                    {
+                        p2_count++;
+                    }
+                }
+
+                if (p1_count > 0 && p2_count > 0)
+                {
+                    count_letter += p1_count + p2_count;
+                }
+            }
+
+            string result_word = "";
+
+            if (count_letter != 0)
+            {
+                int index = count_letter % (word.Length);
+                if (index == 0)
+                {
+                    index = 6;
+                }
+
+                char result_letter = word[index - 1];
+                
+                if (result_letter == 'F')
+                {
+                    result_word = "Friends";
+                }
+                else if (result_letter == 'L')
+                {
+                    result_word = "Lovers";
+                }
+                else if (result_letter == 'A')
+                {
+                    result_word = "Admirers";
+                }
+                else if (result_letter == 'M')
+                {
+                    result_word = "Marriage";
+                }
+                else if (result_letter == 'E')
+                {
+                    result_word = "Enemies";
+                }
+                else if (result_letter == 'S')
+                {
+                    result_word = "Secret Lovers";
+                }
+            }
+            else
+            {
+                result_word = "No Match for these Couple!";
+            }
+
+            
+
+            data.Add(new
+            {
+                count_letter = count_letter,
+                result_word = result_word,
+
+
+            });
+
+            return Json(data, JsonRequestBehavior.AllowGet);
+        }
+    }
+}

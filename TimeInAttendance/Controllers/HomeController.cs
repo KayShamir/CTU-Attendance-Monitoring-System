@@ -316,7 +316,7 @@ namespace Attendance.Controllers
         }
 
         [HttpPost]
-        public async Task<ActionResult> Unenroll(string student_id, string student_name, string course_code, string course_section, string contact)
+        public async Task<ActionResult> Deny(string student_id, string student_name, string course_code, string course_section, string contact)
         {
             try
             {
@@ -346,6 +346,7 @@ namespace Attendance.Controllers
                         cmd.ExecuteNonQuery();
                     }
                 }
+
                 var message = $"Dear {student_name},\n\nWe regret to inform you that your request to join {course_code} {course_section} has been denied. Should you have any concerns, feel free to contact the department.\n\nBest regards,\nProf. Rey Caliao";
 
                 long number = long.Parse("63" + contact);
@@ -368,12 +369,13 @@ namespace Attendance.Controllers
                                         ""text"": ""{message.Replace("\"", "\\\"").Replace("\n", "\\n")}""
                                     }}
                                 ]
-                            }}"; 
+                            }}";
                 var content = new StringContent(body, Encoding.UTF8, "application/json");
 
                 var response = await client.PostAsync("/sms/2/text/advanced", content);
 
                 var responseContent = await response.Content.ReadAsStringAsync();
+
 
                 return Json(new { success = true, message = "Student Application Denied" });
 
@@ -647,6 +649,114 @@ namespace Attendance.Controllers
                     }
                 }
                 return Json(profileList, JsonRequestBehavior.AllowGet);
+
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = "Error: " + ex.Message });
+            }
+
+        }
+
+        [HttpPost]
+        public async Task<ActionResult> Unenroll(string student_id, string student_name, string course_code, string course_section, string contact)
+        {
+            try
+            {
+                contact = contact.StartsWith("0") ? contact.Substring(1) : contact;
+
+
+                using (var db = new SqlConnection(connStr))
+                {
+                    db.Open();
+
+                    string query = @"
+                            DELETE FROM Student_Course
+                            WHERE STUDENT_ID = @stud_id
+                                AND COURSE_ID IN (
+                                    SELECT Course.COURSE_ID
+                                    FROM Course
+                                    WHERE Course.COURSE_CODE = @course_code
+                                        AND Course.COURSE_SECTION = @course_section
+                                )";
+
+                    using (var cmd = new SqlCommand(query, db))
+                    {
+                        cmd.Parameters.AddWithValue("@course_code", course_code);
+                        cmd.Parameters.AddWithValue("@course_section", course_section);
+                        cmd.Parameters.AddWithValue("@stud_id", student_id);
+
+                        cmd.ExecuteNonQuery();
+                    }
+                }
+
+                var message = $"Dear {student_name},\n\nWe regret to inform that you have been unenrolled on the class {course_code} {course_section}. Should you have any concerns, feel free to contact the department.\n\nBest regards,\nProf. Rey Caliao";
+
+                long number = long.Parse("63" + contact);
+
+                var client = new HttpClient();
+                client.BaseAddress = new Uri("https://5y9mzy.api.infobip.com");
+
+                client.DefaultRequestHeaders.Add("Authorization", "App d8abe1ab1300d60a2cd89527ec7a1572-18705815-11c2-4bfd-ae31-9152d3cd83e9");
+                client.DefaultRequestHeaders.Add("Accept", "application/json");
+
+                var body = $@"{{
+                                ""messages"": [
+                                    {{
+                                        ""destinations"": [
+                                            {{
+                                                ""to"": ""{number}""
+                                            }}
+                                        ],
+                                        ""from"": ""CCICT"",
+                                        ""text"": ""{message.Replace("\"", "\\\"").Replace("\n", "\\n")}""
+                                    }}
+                                ]
+                            }}";
+                var content = new StringContent(body, Encoding.UTF8, "application/json");
+
+                var response = await client.PostAsync("/sms/2/text/advanced", content);
+
+                var responseContent = await response.Content.ReadAsStringAsync();
+
+
+                return Json(new { success = true, message = "Student Application Denied" });
+
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = "Error: " + ex.Message });
+            }
+
+        }
+
+        [HttpPost]
+        public ActionResult deleteDrop(string student_id, string course_id)
+        {
+            try
+            {
+
+                using (var db = new SqlConnection(connStr))
+                {
+                    db.Open();
+
+                    string query = @"
+                            DELETE FROM dbo.[drop]
+                            WHERE STUD_ID = @stud_id AND COURSE_ID = @course_id";
+
+                    using (var cmd = new SqlCommand(query, db))
+                    {
+                        cmd.Parameters.AddWithValue("@course_id", course_id);
+                        cmd.Parameters.AddWithValue("@stud_id", student_id);
+
+                        cmd.ExecuteNonQuery();
+                    }
+                }
+
+            
+
+
+                return Json(new { success = true });
 
             }
             catch (Exception ex)

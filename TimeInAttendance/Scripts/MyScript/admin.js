@@ -144,7 +144,7 @@
         formData.append('student_name', $(this).data('name'))
 
         $.ajax({
-            url: '../Home/Unenroll',
+            url: '../Home/Deny',
             type: 'POST',
             data: formData,
             contentType: false,
@@ -157,7 +157,7 @@
                         title: 'Success',
                         text: response.message
                     }).then(function () {
-                        $(this).closest('.notification').remove();
+                        location.reload()
 
                     });
 
@@ -216,7 +216,7 @@
                         title: 'Success',
                         text: response.message
                     }).then(function () {
-                        $(this).closest('.notification').remove();
+                        location.reload()
 
                     });
 
@@ -502,6 +502,8 @@
         $('#profile-selected-sched').text(`(${$(this).data('sched') }, ${$(this).data('time') })`)
         $('#profile-content').hide()
         $('#profile-body-content').show()
+        var url;
+        var formData = new FormData()
 
         
         var formData = new FormData();
@@ -515,23 +517,101 @@
             processData: false,
             success: function (response) {
                 console.log(response)
+
                 $('#profileTable tbody').empty();
-                response.forEach(function (item) {
+                response.forEach(function (student) {
                     var row = `
                     <tr style="font-size: 10px; font-weight: normal; text-align: center;"">
-                        <td>${item.Status}</td>
-                        <td>${item.ID}</td>
-                        <td>${item.Student_Fullname}</td>
-                        <td>${item.Student_Contact}</td>
-                        <td>${item.Guardian_Fullname}</td>
-                        <td>${item.Guardian_Contact}</td>
-                        <td>${item.Relationship_to_Guardian}</td>
-                        <td>${item.Total_Late}</td>
-                        <td>${item.Total_Absent}</td>
-                    </tr>
+                        <td>${student.Status}</td>
+                        <td>${student.ID}</td>
+                        <td>${student.Student_Fullname}</td>
+                        <td>${student.Student_Contact}</td>
+                        <td>${student.Guardian_Fullname}</td>
+                        <td>${student.Guardian_Contact}</td>
+                        <td>${student.Relationship_to_Guardian}</td>
+                        <td>${student.Total_Late}</td>
+                        <td>${student.Total_Absent}</td>
                 `;
+
+                    if (student.Status === 'ENROLLED') {
+                        row += `<td><button class="btn btn-danger profileAction" style="width: 100%; font-size: 10px; font-weight: normal; text-align: center;" data-id="${student.ID}" data-name="${student.Student_Fullname}" data-contact="${student.Student_Contact}" data-url="../Home/Unenroll">Unenroll</button></td>`;
+                    }
+                    else if (student.Status == 'PENDING') {
+                        row += `<td><button class="btn btn-success profileAction" style="width: 100%; font-size: 10px; font-weight: normal; text-align: center;" data-id="${student.ID}" data-name="${student.Student_Fullname}" data-contact="${student.Student_Contact}" data-url="../Home/Enroll">Enroll</button></td>`;
+                    }
+                    else if (student.Status == 'TO BE DROPPED') {
+                        row += `<td><button class="btn btn-warning profileAction" style="width: 100%; font-size: 10px; font-weight: normal; text-align: center;" data-id="${student.ID}" data-url="../Home/deleteDrop">Change</button></td>`;
+                    }
+                    else {
+                        row += '<td></td>';
+                    }
+
+                    row += '</tr>';
+
                     $('#profileTable tbody').append(row);
+
+                    
                 });
+
+                $('.profileAction').click(function () {
+                    formData.append('student_id', $(this).data('id'))
+
+                    if ($(this).text() != 'TO BE DROPPED') {
+                        formData.append('student_name', $(this).data('name'))
+                        formData.append('contact', $(this).data('contact'))
+                        formData.append('course_code', $('#profile-selected-course').text())
+                        formData.append('course_section', $('#profile-selected-section').text())
+                    }
+                    else {
+                        formData.append('course_id', $(this).data('id'))
+                    }
+
+                    const loadingPopup = Swal.fire({
+                        title: 'Processing...',
+                        text: 'Please wait while we process your request.',
+                        allowOutsideClick: false,
+                        showConfirmButton: false,
+                        didOpen: () => {
+                            Swal.showLoading();
+                        }
+                    });
+
+                    $.ajax({
+                        url: $(this).data('url'),
+                        type: 'POST',
+                        data: formData,
+                        contentType: false,
+                        processData: false,
+                        success: function (response) {
+                            loadingPopup.close();
+                            if (response.success) {
+                                Swal.fire({
+                                    icon: 'success',
+                                    title: 'Success',
+                                    text: "Status successfully changed"
+                                }).then(function () {
+                                    location.reload()
+
+                                });
+
+                            } else {
+                                Swal.fire({
+                                    icon: 'error',
+                                    title: 'Error',
+                                    text: response.message
+                                });
+                            }
+                        },
+                        error: function (xhr, status, error) {
+                            loadingPopup.close();
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Error',
+                                text: 'An error occurred. Please try again later.'
+                            });
+                        }
+                    });
+                })
 
                 sortTableBySelectedOption();
 

@@ -104,9 +104,6 @@
             <button type="button" class="btn btn-settings" onclick="openTab(event, 'Notif')">
                 <img src="@Url.Content("~/Content/Images/Doorbell.png")" alt="Settings Icon" class="button-icon"> Notification
             </button>
-            <button type="button" class="btn btn-about" onclick="openTab(event, 'About')">
-                <img src="@Url.Content("~/Content/Images/Info.svg")" alt="About Icon" class="button-icon"> About
-            </button>
             <div class="logout-container">
                 <button type="button" class="btn btn-Logout" id="logoutButton">
                     <img src="@Url.Content("~/Content/Images/Logout.png")" alt="Logout Icon" class="button-icon"> Logout
@@ -282,12 +279,11 @@
                             <img id="back-profile" src="@Url.Content("~/Content/Images/Left.svg")" style="width: 25px; margin-top: -15px; cursor: pointer;" />
                             <p id="profile-selected-course" class="mx-3"></p>
                             <p id="profile-selected-section" class="mx-3"></p>
-                            <p id="profile-selected-sched" class="mx-3"></p>
                         </div>
                     </div>
                     <div class="row align-items-center">
                         <div class="d-flex align-items-center">
-                            <img src="@Url.Content("~/Content/Images/Slider.svg")" style="width: 25px; margin-left: 850px" />
+                            <img src="@Url.Content("~/Content/Images/Slider.svg")" style="width: 25px; margin-left: 10px" />
                             <select id="sortOptions" class="form-control mx-3" style="width: auto; font-size: 9px;">
                                 <option>Name</option>
                                 <option>Late</option>
@@ -301,15 +297,16 @@
                                 <table id="profileTable" class="table table-hover table-striped align-middle">
                                     <thead style="font-size: 12px; font-weight: normal; text-align: center; ">
                                         <tr>
-                                            <th style="width: 10%; background-color: #072c12; color: white;">Status</th>
-                                            <th style="width: 10%; background-color: #072c12; color: white;">ID</th>
-                                            <th style="width: 20%; background-color: #072c12; color: white;">Student Fullname</th>
-                                            <th style="width: 10%; background-color: #072c12; color: white;">Student Contact</th>
-                                            <th style="width: 15%; background-color: #072c12; color: white;">Guardian Fullname</th>
-                                            <th style="width: 10%; background-color: #072c12; color: white;">Guardian Contact</th>
-                                            <th style="width: 10%; background-color: #072c12; color: white;">Relationship to Guardian</th>
-                                            <th style="width: 12.5%; background-color: #072c12; color: white;">Total Late</th>
-                                            <th style="width: 12.5%; background-color: #072c12; color: white;">Total Absent</th>
+                                            <th style="width: 10%; background-color: #072c12; color: white; text-align: center;">Status</th>
+                                            <th style="width: 10%; background-color: #072c12; color: white; text-align: center;">ID</th>
+                                            <th style="width: 20%; background-color: #072c12; color: white; text-align: center;">Student Fullname</th>
+                                            <th style="width: 10%; background-color: #072c12; color: white; text-align: center;">Student Contact</th>
+                                            <th style="width: 15%; background-color: #072c12; color: white; text-align: center;">Guardian Fullname</th>
+                                            <th style="width: 10%; background-color: #072c12; color: white; text-align: center;">Guardian Contact</th>
+                                            <th style="width: 10%; background-color: #072c12; color: white; text-align: center;">Relationship to Guardian</th>
+                                            <th style="width: 5%; background-color: #072c12; color: white; text-align: center;">Total Late</th>
+                                            <th style="width: 5%; background-color: #072c12; color: white; text-align: center;">Total Absent</th>
+                                            <th style="width: 15%; background-color: #072c12; color: white; text-align: center;">Actions</th>
                                         </tr>
                                     </thead>
                                     <tbody>

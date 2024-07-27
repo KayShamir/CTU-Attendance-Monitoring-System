@@ -25,7 +25,7 @@ namespace Attendance_System.Controllers
             try
             {
                 string imag = Path.GetFileName(img.FileName);
-                string logpath = "c:\\attendance";  // Make sure this directory exists on your server
+                string logpath = "c:\\attendance";
                 string filepath = Path.Combine(logpath, imag);
                 img.SaveAs(filepath);
 
