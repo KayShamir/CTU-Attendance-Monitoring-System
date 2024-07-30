@@ -7,6 +7,7 @@
 @{
     ViewBag.Title = "Dashboard";
 
+    //OPEN COURSES
     string connStr = @"Data Source=(LocalDB)\MSSQLLocalDB;AttachDbFilename=C:\Users\kaysh\source\repos\TimeInAttendance\TimeInAttendance\App_Data\AttendanceDB.mdf;Integrated Security=True";
     List<dynamic> openCourses = new List<dynamic>();
 
@@ -69,6 +70,7 @@
 }
 
 @{
+    //ENROLLED COURSES
     List<dynamic> enrollCourses = new List<dynamic>();
 
     using (var db = new SqlConnection(connStr))
@@ -311,6 +313,7 @@
 
         <input type="file" id="fileInput" style="display: none;">
 
+        <!--POPUP OPEN AND ENROLLED-->
         <div class="modal fade" id="courseModal" tabindex="-1" aria-labelledby="courseModalLabel" aria-hidden="true">
             <div class="modal-dialog">
                 <div class="modal-content">

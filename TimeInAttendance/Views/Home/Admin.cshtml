@@ -5,6 +5,7 @@
 @using System.IO;
 
 @{ ViewBag.Title = "Admin";
+    //COURSES AND DASHBOARD AND PROFILE
     string connStr = @"Data Source=(LocalDB)\MSSQLLocalDB;AttachDbFilename=C:\Users\kaysh\source\repos\TimeInAttendance\TimeInAttendance\App_Data\AttendanceDB.mdf;Integrated Security=True";
     List<dynamic> courses = new List<dynamic>();
 
@@ -261,7 +262,7 @@
                     }
                     else
                     {
-                        <p>No Subjects available.</p>
+                        <p>No Courses available.</p>
                     }
                 </div>
             </div>

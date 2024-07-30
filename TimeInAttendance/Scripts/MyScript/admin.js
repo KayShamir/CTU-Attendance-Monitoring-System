@@ -743,17 +743,16 @@
         return `${newHours}:${newMinutes}`;
     }
 
+    //PROFILE
     $('.card-profile').click(function () {
         $('#profile-selected-course').text($(this).data('code'))
         $('#profile-selected-section').text($(this).data('section'))
-        $('#profile-selected-sched').text(`(${$(this).data('sched') }, ${$(this).data('time') })`)
         $('#profile-content').hide()
         $('#profile-body-content').show()
+
         var url;
         var formData = new FormData()
 
-        
-        var formData = new FormData();
         formData.append('course_id', $(this).data('id'))
 
         $.ajax({
@@ -803,7 +802,7 @@
                 $('.profileAction').click(function () {
                     formData.append('student_id', $(this).data('id'))
 
-                    if ($(this).text() != 'TO BE DROPPED') {
+                    if ($(this).text() != 'Change') {
                         formData.append('student_name', $(this).data('name'))
                         formData.append('contact', $(this).data('contact'))
                         formData.append('course_code', $('#profile-selected-course').text())
