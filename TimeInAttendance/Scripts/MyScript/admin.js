@@ -298,7 +298,7 @@
                     Swal.fire({
                         icon: 'error',
                         title: 'Error',
-                        text: "Unable to delete course"
+                        text: "Unable to delete Course; There are still students enrolled. "
                     });
                 }
             },
@@ -488,8 +488,10 @@
 
     $('.card-dashboard').click(function () {
         $('#selected-date').off()
-        $('#note').off()
-        $('#note').hide()
+        $('#startAttendance').off()
+        $('#startAttendance').hide()
+        $('#resumeAttendance').off()
+        $('#resumeAttendance').hide()
 
         id = $(this).data('id')
         var sched = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT']
@@ -530,52 +532,21 @@
                 console.error(error);
             });
 
-        $('#selected-date').on('input', function () {
-            $('#note').hide()
+        $('#startAttendance').click(function () {
+            attendance('../Home/Start')
+        })
 
-            let date = new Date(this.value);
-            let day = date.getDay();
+        $('#resumeAttendance').click(function () {
+            attendance('../Home/Resume')
+        })
 
-            if (!indexList.includes(day)) {
-                console.log('dsdasda')
-                previousDate = this.value;
-                var time = selectedSched.indexOf(sched[day])
-                schedStartTime = subtractTime(selectedTime[time].split(' - ')[0])
-                schedEndTime = selectedTime[time].split(' - ')[1]
-
-                $('#selected-sched').text(`(${days[day]}, ${selectedTime[time]})`)
-
-                schedDate = previousDate
-
-                getAttendanceList(id, previousDate)
-                    .then(response => {
-                        displayAttendance(response);
-                    })
-                    .catch(error => {
-                        // Handle the error here
-                        console.error(error);
-                    });
-            }
-            else {
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Alert',
-                    text: 'No Schedule.',
-                }).then(() => {
-                    $('#selected-date').val(previousDate);
-                });
-            }
-
-       
-        });
-
-        $('#note').click(function () {
+        function attendance(url) {
             var formData = new FormData();
 
             formData.append('course_id', id);
 
             $.ajax({
-                url: '../Home/Start',
+                url: url,
                 type: 'POST',
                 data: formData,
                 contentType: false,
@@ -599,7 +570,7 @@
                     });
                 }
             });
-        })
+        }
     })
 
     $('#back').click(function () {
@@ -660,10 +631,21 @@
     }
 
     function displayAttendance(data) {
+        console.log(data)
         var tbody = $('#attendanceTable tbody');
         tbody.empty();
 
-        console.log(data)
+        const strToday = getCurrentLocalDateTime();
+        const strStartSched = `${schedDate}T${schedStartTime}:00`
+
+        var today = new Date(strToday);
+        var startSched = new Date(strStartSched);
+
+        var timeDiff = today - startSched
+        let stopTime = timeDiff > 45 * 60 * 1000;
+
+        console.log(timeDiff)
+        console.log(stopTime)
 
         if (data.length > 0) {
             data.forEach(item => {
@@ -676,36 +658,39 @@
                 let supportingDocs = item["docs"] ? `<a href="../student/GetDocument?fileName=${encodeURIComponent(item["docs"])}" target="_blank">View Document</a>` : '-';
 
                 var row = `
-                <tr style="font-size: 12px; font-weight: normal; text-align: center;">
-                    <td>${studentId}</td>
-                    <td>${lastName}</td>
-                    <td>${firstName}</td>
-                    <td>${middleNameInitial}</td>
-                    <td>${attendanceTimeIn}</td>
-                    <td>${attendanceStatus}</td>
-                    <td>${supportingDocs}</td>
-                </tr>
-                `;
+            <tr style="font-size: 12px; font-weight: normal; text-align: center;">
+                <td>${studentId}</td>
+                <td>${lastName}</td>
+                <td>${firstName}</td>
+                <td>${middleNameInitial}</td>
+                <td>${attendanceTimeIn}</td>
+                <td>${attendanceStatus}</td>
+                <td>${supportingDocs}</td>
+            </tr>
+            `;
                 tbody.append(row);
             });
-        }
-        else {
-            const strToday = getCurrentLocalDateTime();
-            const strStartSched = `${schedDate}T${schedStartTime}:00`
-            const strEndSched = `${schedDate}T${schedEndTime}:00`
+            if (startSched < today && schedDate == strToday.split('T')[0] && !stopTime) {
+                $('#startAttendance').hide()
+                $('#resumeAttendance').show()
+                console.log('resume')
 
-            var today = new Date(strToday);
-            var startSched = new Date(strStartSched);
-            var endSched = new Date(strEndSched);
-
-            if (startSched < today && schedDate == strToday.split('T')[0] && today < endSched) {
-                $('#note').show()
             }
             else {
-                $('#note').hide()
+                console.log('hide')
+
+                $('#startAttendance').hide()
+                $('#resumeAttendance').hide()
             }
-            
+
         }
+        else if (data.length == 0 && startSched < today && schedDate == strToday.split('T')[0] && !stopTime) {
+            console.log('start')
+            $('#startAttendance').show()
+            $('#resumeAttendance').hide()
+        }
+        console.log(startSched)
+        
     }
 
     function getCurrentLocalDateTime() {

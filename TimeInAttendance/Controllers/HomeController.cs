@@ -197,6 +197,7 @@ namespace Attendance.Controllers
                     {
                         cmd.CommandType = CommandType.Text;
                         cmd.CommandText = "UPDATE COURSE SET " +
+                                          "COURSE_CODE = @code, " +
                                           "COURSE_TITLE = @title, " +
                                           "COURSE_TYPE = @courseType, " +
                                           "COURSE_UNITS = @units, " +
@@ -297,9 +298,9 @@ namespace Attendance.Controllers
                 long number = long.Parse("63" + contact);
 
                 var client = new HttpClient();
-                client.BaseAddress = new Uri("https://e1pd3n.api.infobip.com");
+                client.BaseAddress = new Uri("https://qy5dlr.api.infobip.com");
 
-                client.DefaultRequestHeaders.Add("Authorization", "App 76cbc8aba3b943d5a2dae8264a17011c-2e3203d1-648f-4448-ba4e-eb95936702df");
+                client.DefaultRequestHeaders.Add("Authorization", "App fba6ed6b8b3dc7b5d30cb9fd7928a053-467b4b16-749a-4cb1-a05c-8c10d3058f53");
                 client.DefaultRequestHeaders.Add("Accept", "application/json");
 
                 var body = $@"{{
@@ -368,9 +369,9 @@ namespace Attendance.Controllers
                 string message = $"Dear {student_name},\n\nCongratulations! You have been approved for the course {course_code} {course_section}. We look forward to your active participation.\n\nBest regards,\nProf. Rey Caliao";
 
                 var client = new HttpClient();
-                client.BaseAddress = new Uri("https://e1pd3n.api.infobip.com");
+                client.BaseAddress = new Uri("https://qy5dlr.api.infobip.com");
 
-                client.DefaultRequestHeaders.Add("Authorization", "App 76cbc8aba3b943d5a2dae8264a17011c-2e3203d1-648f-4448-ba4e-eb95936702df");
+                client.DefaultRequestHeaders.Add("Authorization", "App fba6ed6b8b3dc7b5d30cb9fd7928a053-467b4b16-749a-4cb1-a05c-8c10d3058f53");
                 client.DefaultRequestHeaders.Add("Accept", "application/json");
 
                 var body = $@"{{
@@ -416,7 +417,7 @@ namespace Attendance.Controllers
 
                     string query = @"
                             UPDATE dbo.[drop]
-                            SET DROP_STATUS = 'To be enrolled - Notified'
+                            SET DROP_STATUS = 'To be dropped - Notified'
                             WHERE DROP_ID = @drop_id";
 
                     using (var cmd = new SqlCommand(query, db))
@@ -431,9 +432,9 @@ namespace Attendance.Controllers
                 string message = $"Dear {guardian_name},\n\nWe regret to inform you that {student_name} is about to be dropped from his/her class {course_title} {course_section} due to excessive lateness and absences. Professor Rey Caliao would like to schedule a meeting to discuss {student_name}'s situation and explore possible solutions.\n\nPlease contact us at your earliest convenience to arrange a meeting.\n\nThank you,\nProf. Rey Caliao";
 
                 var client = new HttpClient();
-                client.BaseAddress = new Uri("https://e1pd3n.api.infobip.com");
+                client.BaseAddress = new Uri("https://qy5dlr.api.infobip.com");
 
-                client.DefaultRequestHeaders.Add("Authorization", "App 76cbc8aba3b943d5a2dae8264a17011c-2e3203d1-648f-4448-ba4e-eb95936702df");
+                client.DefaultRequestHeaders.Add("Authorization", "App fba6ed6b8b3dc7b5d30cb9fd7928a053-467b4b16-749a-4cb1-a05c-8c10d3058f53");
                 client.DefaultRequestHeaders.Add("Accept", "application/json");
 
                 var body = $@"{{
@@ -536,6 +537,7 @@ namespace Attendance.Controllers
         {
             try
             {
+                int attendance_id;
 
                 using (var db = new SqlConnection(connStr))
                 {
@@ -543,6 +545,7 @@ namespace Attendance.Controllers
 
                     string query = @"
                                     INSERT INTO attendance (student_id, course_id, attendance_date)
+                                    OUTPUT INSERTED.attendance_id
                                     SELECT student_id, course_id, GETDATE() AS attendance_date
                                     FROM student_course
                                     WHERE course_id = @course_id AND stucourse_status = 'ENROLLED';
@@ -550,13 +553,43 @@ namespace Attendance.Controllers
 
                     using (var cmd = new SqlCommand(query, db))
                     {
-                        cmd.Parameters.AddWithValue("@course_id", course_id);
+                        try
+                        {
+                            cmd.Parameters.AddWithValue("@course_id", course_id);
 
-                        cmd.ExecuteNonQuery();
-                        Session["attendance"] = "start";
-                        Session["course_id"] = course_id;
+                            attendance_id = (int)cmd.ExecuteScalar();
+
+
+                            Session["attendance"] = "start";
+                            Session["course_id"] = course_id;
+                            return Json(new { success = true, message = attendance_id });
+
+                        }
+                        catch (NullReferenceException e)
+                        {
+                            return Json(new { success = false, message = "No student enrolled in this course" });
+
+                        }
                     }
                 }
+
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = "Error: " + ex.Message });
+            }
+
+        }
+
+        [HttpPost]
+        public ActionResult Resume(string course_id)
+        {
+            try
+            {
+
+                Session["attendance"] = "start";
+                Session["course_id"] = course_id;
+                  
                 return Json(new { success = true });
 
             }
@@ -703,9 +736,9 @@ namespace Attendance.Controllers
                 long number = long.Parse("63" + contact);
 
                 var client = new HttpClient();
-                client.BaseAddress = new Uri("https://e1pd3n.api.infobip.com");
+                client.BaseAddress = new Uri("https://qy5dlr.api.infobip.com");
 
-                client.DefaultRequestHeaders.Add("Authorization", "App 76cbc8aba3b943d5a2dae8264a17011c-2e3203d1-648f-4448-ba4e-eb95936702df");
+                client.DefaultRequestHeaders.Add("Authorization", "App fba6ed6b8b3dc7b5d30cb9fd7928a053-467b4b16-749a-4cb1-a05c-8c10d3058f53");
                 client.DefaultRequestHeaders.Add("Accept", "application/json");
 
                 var body = $@"{{
